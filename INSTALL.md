@@ -10,7 +10,7 @@ For the frameworks' scripts to run properly, you must install:
 - [docker](https://docs.docker.com/engine/install/), and
 - the Perl module `Array::Utils` (`sudo cpan install Array::Utils`).
 
-### Install
+### Unpack
 
 To install the artifact, just download the .tar from Zenodo or clone the GitHub repository. Here are the commands from the .tar archive:
 
@@ -20,28 +20,63 @@ cd so-many-fuzzers-artifact
 WORKPATH=$(PWD)
 ls $WORKPATH
 ```
->output
+`>output`
 ```
 INSTALL.md	README.md	benchmark	data-220727.tar
 ```
->output
+`>output`
 
 Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder. The content should be the files README.md, and INSTALL.md, the folder benchmark and the raw-data archive 'data-220727.tar'.
 
 > Notice, that we denote the expected outputs from a command with the tag `>output`
 
+### Experiment Data
+
+The experiment data are archived into `data-220727.tar`. We also provide a script to show the raw-data and the data as formatted into the paper. Executing the next commands will print raw-data and Table 3's row for uIP-overflow.
+
+```
+cd $WORKPATH
+tar -xf data-220727.tar
+perl $WORKPATH/benchmark/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
+```
+`>output`
+```
+ -- Campaign CSV Printer -- 
+
+ Raw Data from $WORKPATH/data/3.1/uIP/uip-overflow.csv:
+
+            afl-clang-fast      : afl-gcc             : angora              : honggfuzz           : intriguer           : mopt                : qsym                : symcc               :
+-- run 1  :2781                 :1353                 :10662                :timeout              :3372                 :214                  :2997                 :20                   :
+-- run 2  :876                  :438                  :9588                 :timeout              :3418                 :166                  :886                  :46                   :
+-- run 3  :2990                 :688                  :796                  :timeout              :1811                 :154                  :1294                 :70                   :
+-- run 4  :3091                 :190                  :2618                 :timeout              :640                  :192                  :1334                 :110                  :
+-- run 5  :3554                 :1642                 :1664                 :timeout              :2871                 :195                  :5215                 :32                   :
+-- run 6  :325                  :245                  :214                  :timeout              :6091                 :211                  :335                  :148                  :
+-- run 7  :225                  :198                  :1963                 :timeout              :4623                 :122                  :382                  :118                  :
+-- run 8  :3009                 :3312                 :323                  :timeout              :2023                 :224                  :1236                 :167                  :
+-- run 9  :1998                 :1678                 :3809                 :timeout              :3442                 :127                  :350                  :171                  :
+-- run 10 :2554                 :655                  :450                  :timeout              :1692                 :196                  :365                  :108                  :
+-----------------
+ NBTrial and Mean Time to Exposure from $WORKPATH/data/3.1/uIP/uip-overflow.csv :
+-- afl-clang-fast                :      10:2140   (00:35:40)
+-- afl-gcc                       :      10:1040   (00:17:20)
+-- angora                        :      10:3209   (00:53:29)
+-- honggfuzz                     :       0:0      (00:00:00)
+-- intriguer                     :      10:2998   (00:49:58)
+-- mopt                          :      10:180    (00:03:00)
+-- qsym                          :      10:1439   (00:23:59)
+-- symcc                         :      10:99     (00:01:39)
+-----------------
+```
+`>output`
+
 ## Get Started 
 
-## Reproduce Paper Results
+The experiment consists in launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers. We give you first a small example to check that everything is working well and depict next the commands we ran for reproducing the paper's results.
 
+For the example, we launch _symcc_ for _uip-overflow_ vulnerability and with a timeout of _10_ minutes.
 
-— (old version)
-
-## Basic Usage: fuzzing campaigns
-
-As an example we run the benchmark for the tool _symcc_ and the vulnerability _uip-overflow_ with a timeout of _10_ minutes.
-
-To launch a fuzzing campaign with two trials, run the following commands:
+Running the following commands will launch the campaign:
 ```
 cd ${WORKPATH}/benchmark/suites-management \
   && mkdir -p ${WORKPATH}/test \
@@ -90,259 +125,78 @@ ae30b58908a6   symcc-contiki-ground-truth-uip-overflow-uip   "bash -c 'source /h
 ```
 >output
 
-You can also check the output folder:
-`ls ${WORKPATH}/test/uip-overflow`
->output
-```
-run1	run2
-```
->output
-
-—
-
-After 10 minutes, running `docker ps`should produce:
->output
-```
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-```
->output
-
-You can now compute the overview and .csv file with the command:
+The campaign is running, give SymCC some times to expose the vulnerability… After 10 minutes, the container should have finished, you can now compute the overview and .csv file with the command:
 
 ```
-perl ${WORKPATH}/script/print_campaign_overview.pl -csv=uip-overflow.csv -input=${WORKPATH}/test/uip-overflow/
+perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl -csv=uip-overflow.csv -input=${WORKPATH}/test/uip-overflow/
 ```
 
 >output
 ```
- -- Campaign Result Printer -- 
+  -- Campaign Result Printer -- 
 
   - write raw-data into uip-overflow.csv.
 [+] Collect 1 tools and 2 trials
 
-Warning! run2/symcc has undetected files!
+ Raw Data from ${WORKPATH}/test/uip-overflow/:
 
             symcc               :
 -- run 1  :timeout              :
--- run 2  :341                  :
+-- run 2  :234                  :
 uip-overflow.csv written.
 -----------------
--- symcc                         :       1:341    (00:05:41)
+ NBTrial and Mean Time to Exposure from ${WORKPATH}/test/uip-overflow/ :
+-- symcc                         :       1:234    (00:03:54)
 -----------------
 ```
 >output
 
-According to this instance, only one SymCC's trial exposed _uip-overflow_ after 341 seconds (5 minutes and 41 seconds). (Do not mind the undetected file warnings, they are only here for information.)
+According to this instance, only one SymCC's trial exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds). Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
-
-## Basic Usage: Feeding Corpuses to Sanitizers
-(experimental)
-
-Now that you have launched a fuzzing campaign, you can collect the trials' corpus:
-```
-//create your corpus folder for SymCC trial1
-mkdir -p ${WORKPATH}/test/corpuses/symcc/inputs
-
-cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/queue/* ${WORKPATH}/test/corpuses/symcc/inputs
-
-cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/crashes/* ${WORKPATH}/test/corpuses/symcc/
-
-//Feed the files to AFL-EffectiveSanitizer targets with SymCC configuration
-//Unfortunately, the output folder name is constrained according to the vulnerability name, be sure you follow the pattern <fixname>-corpuses-<fixname>
-mkdir -p ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc
-
-fixname=uip-overflow; pushd $WORKPATH/corpuses/docker; ./validate-witnesses.sh --validation --triage -f ${fixname} -i ${WORKPATH}/test/corpuses/symcc -h effectivesan --output ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc; popd
-```
-(Notice that SymCC-EffectiveSan is the longest docker image to build and lasted 2266.1s for a MacBook Pro Retina to finish)
-
->output
-```
--Contiki-NG Ground Truth script for witnesses validation-
-
-[+] Check for uip-overflow witnesses with instrumentation effectivesan
-  - ... commit found: a1cba5607c44514a9644333b6ca0a9a5e0f3c59e.
-[+] Configure for: uip...
-[+] Write .env files...
-...
-
-[+] Run Docker Image validate-uip-overflow-effectivesan output folder in: ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc:
-Error response from daemon: No such container: 19f8508fb5f9
-[+] Container terminated.
-    - witnesses found:        0
-```
->output
-
-Finally, you can have the result overview using the script:
-```
-perl ${WORKPATH}/corpuses/docker/collect_campaign_witnesses.pl -input=${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses
-```
-
->output
-```
- -- Campaign Witnesses Collector -- 
-
-[+] Collect 1 tools and 1 trials
--- run1
-                         :timeout :
------------------
--- run1
-                         :       0:0      (00:00:00)
------------------
-I found 0 different stack traces
-Unique witness set:
-```
-output
-
-
-### Structure of a campaign folder:
-`tree -L 5 ${WORKPATH}/test/uip-overflow`
->output
-```
-${WORKPATH}/test/uip-overflow
-├── run1
-│   └── symcc
-│       ├── container.log
-│       ├── crash-triage
-│       │   └── timestamps
-│       ├── log
-│       │   ├── afl-master.log
-│       │   ├── afl-slave.log
-│       │   ├── end_time
-│       │   ├── start_time
-│       │   ├── symcc.log
-│       │   └── triage.log
-│       └── sync_folder
-│           ├── afl-master
-│           │   ├── crashes
-│           │   ├── fuzz_bitmap
-│           │   ├── fuzzer_stats
-│           │   ├── hangs
-│           │   ├── plot_data
-│           │   └── queue
-│           ├── afl-slave
-│           │   ├── crashes
-│           │   ├── fuzz_bitmap
-│           │   ├── fuzzer_stats
-│           │   ├── hangs
-│           │   ├── plot_data
-│           │   └── queue
-│           └── symcc
-│               ├── bitmap
-│               ├── crashes
-│               ├── hangs
-│               ├── queue
-│               └── stats
-└── run2
-    └── symcc
-        ├── container.log
-        ├── crash-triage
-        │   ├── notfixed
-        │   │   ├── 1614488562.stacktrace
-        │   │   ├── bad-inputs
-        │   │   ├── notfixed-report.txt
-        │   │   ├── stacktraces
-        │   │   └── valgrind-ea6c68880a.txt
-        │   ├── timestamps
-        │   ├── undetected
-        │   │   └── undetected
-        │   └── witnesses
-        │       ├── bad-inputs
-        │       ├── stacktraces
-        │       ├── valgrind-a1cba5607c.txt
-        │       └── witness-report.txt
-        ├── log
-        │   ├── afl-master.log
-        │   ├── afl-slave.log
-        │   ├── end_time
-        │   ├── start_time
-        │   ├── symcc.log
-        │   ├── triage-compile.log
-        │   └── triage.log
-        └── sync_folder
-            ├── afl-master
-            │   ├── crashes
-            │   ├── fuzz_bitmap
-            │   ├── fuzzer_stats
-            │   ├── hangs
-            │   ├── plot_data
-            │   └── queue
-            ├── afl-slave
-            │   ├── crashes
-            │   ├── fuzz_bitmap
-            │   ├── fuzzer_stats
-            │   ├── hangs
-            │   ├── plot_data
-            │   └── queue
-            └── symcc
-                ├── bitmap
-                ├── crashes
-                ├── hangs
-                ├── queue
-                └── stats
-
-42 directories, 38 files
-```
->output (the output can change if SymCC found a witness or not)
-
-The output folder is composed of one folder per trial (named `run<i>`),
-containing one folder per tool (give the same output folder to add another tool in the corresponding run<i>). 
-
-A tool folder contains:
-- a _crash-triage_ giving details on the witnesses and bad inputs found,
-- a _log_ folder, and
-- a tool's instance folder (the AFL root folder in general).
-
-> Notice that we enabled the tools' log to keep track of the fuzzers' status.
-> However, you may want to remove those files (especially intriguer.log and afl-master/slave.log) after a campaign to free disk usage.
-
----
-
-# Get the results
-
+> Note: Fuzzing campaigns are greedy in disk-usage and memory. Please be sure you have sufficient resource before running campaigns and frequently clean Docker's images and campaign's logs.
 
 ## Reproduce Paper Results
 
-> **CAUTION: Monitor your CPU and disk usages as many containers can be greedy.** 
+### To reproduce Section 3 results
 
-### To reproduce Section 3
-- Run a campaign with 10 tools for all combinations <vulnerability, tool>, using the command:
+For section 3, we ran a campaign with 10 tools for all combinations <vulnerability, tool> using the command:
 ```
 cd ${WORKPATH}/benchmark/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
-- You can find the paper raw data in the .csv in `${WORKPATH}/data/3.1`.
+- The paper's raw-data are in `${WORKPATH}/data/3.1`.
 
-### To reproduce 4.1 
-- Run a campaign with 10 tools for all combinations <vulnerability, tool>, using the command:
+### To reproduce Section 4.1 results
+
+For section 4.1, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with AddressSanitizer using the command:
 ```
 cd ${WORKPATH}/benchmark/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh --san asan -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
-- You can find the paper raw data in the .csv in `${WORKPATH}/data/4.1`.
+- The paper's raw-data are in `${WORKPATH}/data/4.1`.
 
 ### To reproduce 4.2
-Run a campaign with 10 tools for all combinations <vulnerability, tool>, using the command:
+
+For section 4.2, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the command:
 ```
 cd ${WORKPATH}/benchmark/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh --san effectivesan -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
-- You can find the paper raw data in the .csv in `${WORKPATH}/data/4.2`.
+- The paper's raw-data are in `${WORKPATH}/data/4.2`.
 
-—
+### Values for <tool> and <vulnerability>
 
 Values for <tool> (option -f): `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`. 
 
 Values for <vulnerability> (option -b): `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`. 
 
-### To reproduce 4.3
+### To reproduce 4.3 --old-version--
 
-Due to the large disk-usage the 8x18x3 campaigns take, we provide one corpus in data/corpuses.
-
-The experiment consists in feeding those corpuses to different binaries.
-For the example, which is building EffectiveSanitizer, only one Docker image needs to be computed in order to set the good configuration for Contiki-NG and the target binary. However, all the files from those corpuses need to be fed (twice) to the binary, so it lasts a bit of time (one hour for a MacBook Pro Retina).
+The experiment consists in feeding corpuses from a fuzzing campaign to different binaries.
+For the example, which is building EffectiveTypeSanitizer, only one Docker image needs to be computed in order to set the good configuration for Contiki-NG and the target binary. However, all the files from those corpuses need to be fed (twice) to the binary, so it lasts a bit of time (one hour for a MacBook Pro Retina).
 
 ```
 fixname=uip-len; \
@@ -361,6 +215,26 @@ pushd ${WORKPATH}/corpuses/docker \
 done; popd
 
 ```
+```
+fixname=uip-len; \
+inputfolder=${WORKPATH}/data/corpuses/${fixname}; \
+outputfolder=${WORKPATH}/test/FC-with-EffSan/${fixname}; \
+instrumentation=effectivesan; \
+mkdir -p ${outputfolder}; \
+pushd ${WORKPATH}/benchmark/suites-management \
+&& for tool in ${inputfolder}/run1/*; do \
+  base_tool=$(basename ${tool}) \
+  && BUILD_ONLY=1 ./run-ground-truth-campaign.sh --san ${instrumentation} -b ${fixname} -f ${base_tool}; \
+  for trial in ${fuzzingcampaign}/*; do \
+    nb=$(basename $trial) \
+    && mkdir -p "${outputfolder}/${nb}/";  \
+    && INPUT=${trial}/${base_tool} ./run-ground-truth-campaign.sh --san ${instrumentation} -b ${fixname} -f ${base_tool} --output ${outputfolder}/${nb}; \
+    sleep 2; \
+    done; \
+  sleep 600;
+  done; popd
+```
+
 >output
 ```
 
@@ -501,7 +375,167 @@ id:000142,src:000138+000012,op:splice,rep:16 --
 
 You can see the witnesses detected by EffectiveSanitizer from the corpuses of uIP-len of Section 3.
 
-—
+
+— (old version)
+
+
+## Basic Usage: Feeding Corpuses to Sanitizers
+(experimental)
+
+Now that you have launched a fuzzing campaign, you can collect the trials' corpus:
+```
+//create your corpus folder for SymCC trial1
+mkdir -p ${WORKPATH}/test/corpuses/symcc/inputs
+
+cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/queue/* ${WORKPATH}/test/corpuses/symcc/inputs
+
+cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/crashes/* ${WORKPATH}/test/corpuses/symcc/
+
+//Feed the files to AFL-EffectiveSanitizer targets with SymCC configuration
+//Unfortunately, the output folder name is constrained according to the vulnerability name, be sure you follow the pattern <fixname>-corpuses-<fixname>
+mkdir -p ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc
+
+fixname=uip-overflow; pushd $WORKPATH/corpuses/docker; ./validate-witnesses.sh --validation --triage -f ${fixname} -i ${WORKPATH}/test/corpuses/symcc -h effectivesan --output ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc; popd
+```
+(Notice that SymCC-EffectiveSan is the longest docker image to build and lasted 2266.1s for a MacBook Pro Retina to finish)
+
+>output
+```
+-Contiki-NG Ground Truth script for witnesses validation-
+
+[+] Check for uip-overflow witnesses with instrumentation effectivesan
+  - ... commit found: a1cba5607c44514a9644333b6ca0a9a5e0f3c59e.
+[+] Configure for: uip...
+[+] Write .env files...
+...
+
+[+] Run Docker Image validate-uip-overflow-effectivesan output folder in: ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc:
+Error response from daemon: No such container: 19f8508fb5f9
+[+] Container terminated.
+    - witnesses found:        0
+```
+>output
+
+Finally, you can have the result overview using the script:
+```
+perl ${WORKPATH}/corpuses/docker/collect_campaign_witnesses.pl -input=${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses
+```
+
+>output
+```
+ -- Campaign Witnesses Collector -- 
+
+[+] Collect 1 tools and 1 trials
+-- run1
+                         :timeout :
+-----------------
+-- run1
+                         :       0:0      (00:00:00)
+-----------------
+I found 0 different stack traces
+Unique witness set:
+```
+>output
+
+## Other 
+
+### Structure of a campaign folder:
+`tree -L 5 ${WORKPATH}/test/uip-overflow`
+>output
+```
+${WORKPATH}/test/uip-overflow
+├── run1
+│   └── symcc
+│       ├── container.log
+│       ├── crash-triage
+│       │   └── timestamps
+│       ├── log
+│       │   ├── afl-master.log
+│       │   ├── afl-slave.log
+│       │   ├── end_time
+│       │   ├── start_time
+│       │   ├── symcc.log
+│       │   └── triage.log
+│       └── sync_folder
+│           ├── afl-master
+│           │   ├── crashes
+│           │   ├── fuzz_bitmap
+│           │   ├── fuzzer_stats
+│           │   ├── hangs
+│           │   ├── plot_data
+│           │   └── queue
+│           ├── afl-slave
+│           │   ├── crashes
+│           │   ├── fuzz_bitmap
+│           │   ├── fuzzer_stats
+│           │   ├── hangs
+│           │   ├── plot_data
+│           │   └── queue
+│           └── symcc
+│               ├── bitmap
+│               ├── crashes
+│               ├── hangs
+│               ├── queue
+│               └── stats
+└── run2
+    └── symcc
+        ├── container.log
+        ├── crash-triage
+        │   ├── notfixed
+        │   │   ├── 1614488562.stacktrace
+        │   │   ├── bad-inputs
+        │   │   ├── notfixed-report.txt
+        │   │   ├── stacktraces
+        │   │   └── valgrind-ea6c68880a.txt
+        │   ├── timestamps
+        │   ├── undetected
+        │   │   └── undetected
+        │   └── witnesses
+        │       ├── bad-inputs
+        │       ├── stacktraces
+        │       ├── valgrind-a1cba5607c.txt
+        │       └── witness-report.txt
+        ├── log
+        │   ├── afl-master.log
+        │   ├── afl-slave.log
+        │   ├── end_time
+        │   ├── start_time
+        │   ├── symcc.log
+        │   ├── triage-compile.log
+        │   └── triage.log
+        └── sync_folder
+            ├── afl-master
+            │   ├── crashes
+            │   ├── fuzz_bitmap
+            │   ├── fuzzer_stats
+            │   ├── hangs
+            │   ├── plot_data
+            │   └── queue
+            ├── afl-slave
+            │   ├── crashes
+            │   ├── fuzz_bitmap
+            │   ├── fuzzer_stats
+            │   ├── hangs
+            │   ├── plot_data
+            │   └── queue
+            └── symcc
+                ├── bitmap
+                ├── crashes
+                ├── hangs
+                ├── queue
+                └── stats
+
+42 directories, 38 files
+```
+>output (the output can change if SymCC found a witness or not)
+
+The output folder is composed of one folder per trial (named `run<i>`),
+containing one folder per tool (give the same output folder to add another tool in the corresponding run<i>). 
+
+A tool folder contains:
+- a _crash-triage_ giving details on the witnesses and bad inputs found,
+- a _log_ folder, and
+- a tool's instance folder (the AFL root folder in general).
 
 # Docker 
 
