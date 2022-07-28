@@ -1,0 +1,129 @@
+#!/bin/bash
+
+##Required
+#SEED_FOLDER
+#SYNC_FOLDER
+#AFL_CMD
+#ANGORA_CMD
+#AFL_PATH
+#LOG_PATH
+##Optional
+#AFL_SANITIZED
+#AFL_SKIP_CPUFREQ
+#AFL_NO_AFFINITY
+
+unset QUIET SETCPU
+## loops through options
+while test $# -gt 0; do
+  case "$1" in
+
+    -q|--quiet)
+      export AFL_NO_UI=1
+      QUIET=1
+      ;;
+
+    --cpu)
+      SETCPU=$2
+      shift
+      ;;
+
+    *)
+      echo "Error: invalid option." >&2
+      exit 1
+      ;;
+
+   esac
+   shift
+done
+
+## Magma:
+# set default max log size to 1 MiB
+LOGSIZE=${LOGSIZE:-$[1 << 20]}
+echo "Start trial at $(date -u '+%F %R')"
+
+##set AFL master/slave common options and sanitizers flags
+afl_options="-i $SEED_FOLDER -o $SYNC_FOLDER -- $AFL_CMD"
+case "${AFL_SANITIZED}" in
+  asan)
+    export ASAN_OPTIONS="abort_on_error=1:symbolize=0"
+    afl_options="-m none -t +100 $afl_options"
+    echo "  [+] Container configured for address sanitized target"
+    ;;
+
+  ubsan)
+    export UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
+    echo "  [+] Container configured for undefined behaviors sanitized target"
+    ;;
+
+  effectivesan)
+    export EFFECTIVE_ABORT=1
+    export EFFECTIVE_MAXERRS=1
+    afl_options="-m none -t +100 $afl_options"
+    echo "  [+] Container configured for effectiveSan target"
+    ;;
+
+  *)
+    ;;
+esac
+
+##set command according to SETCPU (AFL_NO_AFFINITY is assumed set to 1)
+function run_afl_fuzzer {
+  afl_type=$1
+  cpu_id=$2
+  if [ "$SETCPU" = "" ];
+  then
+    echo "run: ${AFL_PATH}/afl-fuzz ${afl_type} ${afl_options}"
+    ${AFL_PATH}/afl-fuzz ${afl_type} ${afl_options}
+  else
+    echo "run: taskset -c ${cpu_id} ${AFL_PATH}/afl-fuzz ${afl_type} ${afl_options}"
+    taskset -c ${cpu_id} ${AFL_PATH}/afl-fuzz ${afl_type} ${afl_options}
+  fi
+}
+
+# go to our work directory
+cd ${WORKDIR_PATH}
+
+echo "  [+] seeds:                  ${SEED_FOLDER}"
+echo "  [+] AFL root:               ${SYNC_FOLDER}"
+echo "  [+] AFL target command:     ${AFL_CMD}"
+echo "  [+] angora target command:  ${ANGORA_CMD}"
+echo "  [+] entry:                  ${ENTRY_POINT}"
+if [ "${COMMIT_TO_FUZZ}" != "" ];
+then
+  actual_commit=$(cd ${CONTIKI_PATH} && git log -1 --pretty=format:"%h")
+  echo "  [+] COMMIT:                 ${actual_commit}"
+fi
+if [ "${BUGSET}" != "" ];         then echo "  [+] BUGSET:                 ${BUGSET}"; fi
+
+echo
+echo "Run afl-master (outputs in ${LOG_PATH}/afl-master.log)"
+run_afl_fuzzer "-M afl-master" "${SETCPU}" > ${LOG_PATH}/afl-master.log &
+PIDS[0]=$!
+#echo " --- [$(date -u '+%F %R')] ${PIDS[0]} starts"
+if [ "${SETCPU}" != "" ]; then SETCPU=$((${SETCPU}+1)); fi
+
+sleep 3
+
+echo "Run afl-slave (outputs in ${LOG_PATH}/afl-slave.log)"
+run_afl_fuzzer "-S afl-slave" "${SETCPU}" > ${LOG_PATH}/afl-slave.log &
+PIDS[1]=$!
+#echo " --- [$(date -u '+%F %R')] ${PIDS[1]} starts"
+if [ "${SETCPU}" != "" ]; then SETCPU=$((${SETCPU}+1)); fi
+
+sleep 3
+
+if [ "${QUIET}" = "" ]; then
+  ${ANGORA_PATH}/angora_fuzzer --sync_afl -A -i ${SEED_FOLDER} -o ${SYNC_FOLDER} -t ${WORKDIR_PATH}/bin/${HARNESS_NAME}.taint -- ${ANGORA_CMD}
+else
+  echo "Run angora (logs in ${SYNC_FOLDER}/angora)"
+  ${ANGORA_PATH}/angora_fuzzer --sync_afl -A -i ${SEED_FOLDER} -o ${SYNC_FOLDER} -t ${WORKDIR_PATH}/bin/${HARNESS_NAME}.taint -- ${ANGORA_CMD} > /dev/null 2>&1 &
+  PIDS[2]=$!
+  #echo " --- [$(date -u '+%F %R')] ${PIDS[2]} starts"
+
+  #### first wait for Angora ending and log time
+  wait ${PIDS[2]}
+  echo "Angora stops at: $(date -u '+%F %R')"
+
+  #### wait for one of the other AFL-instances (until the timeouts)
+  wait ${PIDS[1]}
+fi

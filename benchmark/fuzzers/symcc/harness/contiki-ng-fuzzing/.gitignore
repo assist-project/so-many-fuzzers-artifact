@@ -1,0 +1,4 @@
+afl-out/
+build/
+fuzzer.native
+fuzzing-input

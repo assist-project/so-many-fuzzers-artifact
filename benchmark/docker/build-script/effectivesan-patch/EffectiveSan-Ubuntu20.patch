@@ -1,0 +1,80 @@
+diff --git a/build.sh b/build.sh
+index 74497f03..7799c812 100755
+--- a/build.sh
++++ b/build.sh
+@@ -66,6 +66,8 @@ build_llvm()
+             -DCMAKE_INSTALL_PREFIX=install \
+             -DBUILD_SHARED_LIBS=ON \
+             -DLLVM_TARGETS_TO_BUILD="X86" \
++	    -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$HOME/toolchains/lib64 -L$HOME/toolchains/lib64" \
++	    -DCMAKE_CXX_FLAGS="--gcc-toolchain=$HOME/toolchains" \
+             -DLLVM_BUILD_TOOLS=OFF
+     fi
+     PARALLEL=`grep -c ^processor /proc/cpuinfo`
+diff --git a/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cc b/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
+index 683f019d..53d3af6b 100644
+--- a/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
++++ b/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
+@@ -38,7 +38,6 @@
+ #include <sys/mman.h>
+ #include <sys/resource.h>
+ #include <sys/socket.h>
+-#include <sys/stat.h>
+ #include <sys/time.h>
+ #include <sys/times.h>
+ #include <sys/types.h>
+@@ -160,7 +159,6 @@ typedef struct user_fpregs elf_fpregset_t;
+ # include <sys/procfs.h>
+ #endif
+ #include <sys/user.h>
+-#include <sys/ustat.h>
+ #include <linux/cyclades.h>
+ #include <linux/if_eql.h>
+ #include <linux/if_plip.h>
+@@ -253,7 +251,19 @@ namespace __sanitizer {
+ #endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+ 
+ #if SANITIZER_LINUX && !SANITIZER_ANDROID
+-  unsigned struct_ustat_sz = sizeof(struct ustat);
++  // Use pre-computed size of struct ustat to avoid <sys/ustat.h> which
++  // has been removed from glibc 2.28.
++#if defined(__aarch64__) || defined(__s390x__) || defined (__mips64) \
++  || defined(__powerpc64__) || defined(__arch64__) || defined(__sparcv9) \
++  || defined(__x86_64__)
++#define SIZEOF_STRUCT_USTAT 32
++#elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
++  || defined(__powerpc__) || defined(__s390__)
++#define SIZEOF_STRUCT_USTAT 20
++#else
++#error Unknown size of struct ustat
++#endif
++  unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
+   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
+   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
+ #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
+@@ -1147,8 +1157,9 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
+ CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
+-#if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
+-/* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
++#if !SANITIZER_LINUX || __GLIBC_PREREQ (2, 31)
++/* glibc 2.30 and earlier provided 16-bit mode field instead of 32-bit
++   on many architectures.  */
+ CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
+ #endif
+ 
+diff --git a/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.h b/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.h
+index c2d9f2cd..e4669d36 100644
+--- a/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.h
++++ b/llvm-4.0.1.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.h
+@@ -225,8 +225,7 @@ namespace __sanitizer {
+     unsigned long __unused1;
+     unsigned long __unused2;
+ #else
+-    unsigned short mode;
+-    unsigned short __pad1;
++    unsigned int mode;
+     unsigned short __seq;
+     unsigned short __pad2;
+ #if defined(__x86_64__) && !defined(_LP64)

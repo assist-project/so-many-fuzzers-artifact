@@ -1,0 +1,11 @@
+--- alpha-linux-unwind.h	2022-01-10 14:01:08.403873573 +0000
++++ alpha-linux-unwind.h.new	2022-01-10 14:02:48.267207893 +0000
+@@ -51,7 +51,7 @@
+     {
+       struct rt_sigframe {
+ 	siginfo_t info;
+-	struct ucontext uc;
++	ucontext_t uc;
+       } *rt_ = context->cfa;
+       sc = &rt_->uc.uc_mcontext;
+     }

@@ -1,0 +1,12 @@
+--- sanitizer_platform_limits_posix.h	2022-01-12 11:37:07.239287988 +0000
++++ sanitizer_platform_limits_posix.h.new	2022-01-12 11:38:12.648736902 +0000
+@@ -225,8 +225,7 @@
+     unsigned long __unused1;
+     unsigned long __unused2;
+ #else
+-    unsigned short mode;
+-    unsigned short __pad1;
++    unsigned int mode;
+     unsigned short __seq;
+     unsigned short __pad2;
+ #if defined(__x86_64__) && !defined(_LP64)

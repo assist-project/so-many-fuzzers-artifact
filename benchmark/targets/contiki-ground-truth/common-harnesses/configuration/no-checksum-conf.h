@@ -1,0 +1,1 @@
+#define UIP_CONF_IPV6_CHECKS 0

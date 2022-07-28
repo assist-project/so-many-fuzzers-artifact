@@ -1,0 +1,25 @@
+--- afl-fuzz.c	2020-08-09 13:16:58.000000000 +0200
++++ patched-afl-fuzz.c	2020-08-08 20:06:24.000000000 +0200
+@@ -5368,11 +5368,6 @@
+     // printf("cmd: %s\n", cmd);
+     system(cmd);
+     ck_free(cmd);
+-
+-    cmd = alloc_printf("rm -r %s", temp_dir);
+-
+-    system(cmd);
+-    ck_free(cmd);
+   }
+ 
+   if(queue_cur->fields == NULL)
+@@ -5381,6 +5376,10 @@
+   ck_free(field_name);
+   ck_free(fname);
+ 
++  u8 *cmd = alloc_printf("rm -r %s", temp_dir);
++
++  system(cmd);
++  ck_free(cmd); 
+ 
+   /*********************
+    * PERFORMANCE SCORE *

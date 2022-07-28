@@ -1,0 +1,10 @@
+--- asan_linux.cc	2022-01-10 14:44:23.799630779 +0000
++++ asan_linux.cc.new	2022-01-10 14:45:04.573627607 +0000
+@@ -25,6 +25,7 @@
+ #include <sys/types.h>
+ #include <fcntl.h>
+ #include <pthread.h>
++#include <signal.h>
+ #include <stdio.h>
+ #include <unistd.h>
+ #include <unwind.h>

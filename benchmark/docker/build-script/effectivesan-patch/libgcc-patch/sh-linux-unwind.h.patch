@@ -1,0 +1,11 @@
+--- sh-linux-unwind.h	2022-01-10 14:08:11.969784990 +0000
++++ sh-linux-unwind.h.new	2022-01-10 14:15:26.199939759 +0000
+@@ -83,7 +83,7 @@
+ 	siginfo_t *pinfo;
+ 	void *puc;
+ 	siginfo_t info;
+-	struct ucontext uc;
++	ucontext_t uc;
+       } *rt_ = context->cfa;
+       /* The void * cast is necessary to avoid an aliasing warning.
+          The aliasing warning is correct, but should not be a problem

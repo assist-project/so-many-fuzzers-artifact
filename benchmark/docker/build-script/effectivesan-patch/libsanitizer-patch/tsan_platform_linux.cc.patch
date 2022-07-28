@@ -1,0 +1,11 @@
+--- tsan_platform_linux.cc	2022-01-10 15:07:14.188004918 +0000
++++ tsan_platform_linux.cc.new	2022-01-10 15:07:52.013681793 +0000
+@@ -39,7 +39,7 @@
+ #include <sched.h>
+ #include <dlfcn.h>
+ #define __need_res_state
+-#include <resolv.h>
++#include "bits/types/res_state.h"
+ 
+ extern "C" int arch_prctl(int code, __sanitizer::uptr *addr);
+ 

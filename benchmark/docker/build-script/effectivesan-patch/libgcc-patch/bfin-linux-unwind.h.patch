@@ -1,0 +1,11 @@
+--- bfin-linux-unwind.h	2022-01-10 14:06:44.184379956 +0000
++++ bfin-linux-unwind.h.new	2022-01-10 14:12:08.685783562 +0000
+@@ -52,7 +52,7 @@
+ 	void *puc;
+ 	char retcode[8];
+ 	siginfo_t info;
+-	struct ucontext uc;
++	ucontext_t uc;
+       } *rt_ = context->cfa;
+ 
+       /* The void * cast is necessary to avoid an aliasing warning.

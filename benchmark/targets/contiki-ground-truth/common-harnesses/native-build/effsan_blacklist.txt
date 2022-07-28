@@ -1,0 +1,11 @@
+fun:list_add
+fun:list_push
+fun:list_item_next
+fun:platform_init_stage_one
+fun:upper_layer_chksum
+fun:uip_ds6_init
+fun:uip_ds6_addr_add
+fun:uip_ds6_maddr_add
+fun:uip_ds6_prefix_add
+fun:uip_ds6_addr_lookup
+fun:uip_ds6_maddr_lookup
