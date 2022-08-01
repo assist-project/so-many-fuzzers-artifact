@@ -381,15 +381,22 @@ sub execute_inputs {
   `mkdir $LAB_PATH/$commit`;
   `mkdir $LAB_PATH/$commit/to-detect`;
   `cp -p $crash_folder/* $LAB_PATH/$commit/to-detect`;
-  
+
   if ( -d "$LAB_PATH/eval-build/savior-build" ) {
 	  if ( $ENV{AFL_SANITIZED} ) { $ENV{'AFL_COMPANION'}="afl-clang-fast-$ENV{AFL_SANITIZED}"}
 	  else                       { $ENV{'AFL_COMPANION'}="afl-clang-fast"}
   }
 
   ## set oracle with AFL_COMPANION if not set
+  print "-- WITNESS_ORACLE $ENV{'WITNESS_ORACLE'} --\n" if (defined $ENV{'WITNESS_ORACLE'});
+  print "-- AFL_COMPANION $ENV{'AFL_COMPANION'} --\n" if (defined $ENV{'AFL_COMPANION'});
   unless ( defined $ENV{'WITNESS_ORACLE'} ) {
-	  $ENV{'WITNESS_ORACLE'} = $ENV{'AFL_COMPANION'}
+    die "AFL_COMPANION or WITNESS_ORACLE should be set" unless ( defined $ENV{'AFL_COMPANION'} );
+    print "-- set WITNESS_ORACLE with $ENV{'AFL_COMPANION'} --\n";
+	  $ENV{'WITNESS_ORACLE'} = $ENV{'AFL_COMPANION'};
+  } elsif ( $ENV{'WITNESS_ORACLE'} =~ /^\s*$/ ) {
+    print "-- set WITNESS_ORACLE with $ENV{'AFL_COMPANION'} --\n";
+	  $ENV{'WITNESS_ORACLE'} = $ENV{'AFL_COMPANION'};
   }
 
   print "\n[+] -- Commit $commit --\n";
@@ -454,14 +461,14 @@ sub afl_savior_companion_check {
     print "\t[-] Compiling Contiki-NG with $ENV{'AFL_COMPANION'} (savior) --\n";
 
     chdir("$LAB_PATH/eval-build/savior-build");
-    
+
     `patch ../../contiki-ground-truth/Makefile.include < patch/Makefile.include.patch`;
     if ( $ENV{'FIXNAME'} =~ /uip-rpl-classic.*/ ) {
  	`patch ../../contiki-ground-truth/os/net/ipv6/uip-nd6.c < patch/uip-nd6.patch`;
     }
 
     `./savior-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
-    
+
     `rm -fr bin` if (-d "bin");
     `mkdir bin`;
     `mv $ENV{'WORKDIR_PATH'}/bin/$ENV{'HARNESS_NAME'}.afl-clang-fast bin/`;
@@ -490,9 +497,9 @@ sub companion_check {
      {$path_to_oracle="eval-build/afl-build";}
     elsif ( $ENV{'WITNESS_ORACLE'} =~ /hfuzz/ )
      {$path_to_oracle="eval-build/hfuzz-build";}
-     else 
+     else
      {$path_to_oracle="eval-build/native-build";}
-    
+
     # compile and check binary
     print "\t[-] Compiling Contiki-NG with $path_to_oracle/$ENV{'WITNESS_ORACLE'} --\n";
 

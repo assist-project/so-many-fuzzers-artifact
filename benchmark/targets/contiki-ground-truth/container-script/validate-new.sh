@@ -38,7 +38,7 @@ if [ ! "${IS_CORPUS}" = "" ]
 then
 	echo "Validate corpus at ${WORKDIR_PATH}/input/inputs"
 	input_folder="${WORKDIR_PATH}/input/inputs"
-	`cp ${WORKDIR_PATH}/input/*timestamps* ${SHARED}/crash-triage/timestamps`; 
+	`cp ${WORKDIR_PATH}/input/*timestamps* ${SHARED}/crash-triage/timestamps`;
 else
         ## gather crashes and hangs found by all tools
 	echo "Validate reported inputs at ${PWD}/bad-inputs"
@@ -48,9 +48,3 @@ fi
 
 ## apply Contiki-NG ground truth' crash triage (for the configured vulnerability's fixname)
 perl ground-truth-triage-new.pl -validate -fix=${FIXNAME} -stamps=${SHARED}/crash-triage/timestamps -output=${SHARED}/crash-triage -- ${input_folder} >> ${LOG_PATH}/triage.log 2>&1
-
-## compile with -g and produce complete witnesses traces
-if [ -d "${SHARED}/crash-triage/witnesses" ];
-then
-	perl trace-witnesses-lines.pl -input_folder=${SHARED}/crash-triage/witnesses/bad-inputs > ${SHARED}/crash-triage/witness-coverage.txt
-fi

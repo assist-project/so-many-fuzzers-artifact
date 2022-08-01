@@ -1,13 +1,13 @@
 # Artifact Instructions 
 
-Both the raw-data and the fuzzing framework are available with the public link in Zenodo:
+Both the raw data and the fuzzing framework are available with the public link in Zenodo:
 
 ## Obtain and Install the Artifact 
 
 ### Requirements 
 
-For the frameworks' scripts to run properly, you must install:
-- [docker](https://docs.docker.com/engine/install/), and
+For the benchmark to run properly, you must install:
+- [Docker](https://docs.docker.com/engine/install/), and
 - the Perl module `Array::Utils` (`sudo cpan install Array::Utils`).
 
 ### Unpack
@@ -17,7 +17,7 @@ To install the artifact, just download the .tar from Zenodo or clone the GitHub 
 ```
 tar -xf so-many-fuzzers-artifact.tar
 cd so-many-fuzzers-artifact
-WORKPATH=$(PWD)
+WORKPATH=$PWD
 ls $WORKPATH
 ```
 `>output`
@@ -78,9 +78,8 @@ For the example, we launch _symcc_ for _uip-overflow_ vulnerability and with a t
 
 Running the following commands will launch the campaign:
 ```
-cd ${WORKPATH}/benchmark/suites-management \
-  && mkdir -p ${WORKPATH}/test \
-  && ./run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
+mkdir -p ${WORKPATH}/test \
+  && ${WORKPATH}/benchmark/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
 ```
 >output
 ```
@@ -95,19 +94,19 @@ cd ${WORKPATH}/benchmark/suites-management \
     -f symcc
     -s contiki-ground-truth
     -h contiki-ng-fuzzing
-    and options: --tag symcc-contiki-ground-truth-uip-overflow-uip -n 2 -o ${WORKPATH}/test/uip-overflow -t 10m
+    and options: --tag fuzz-symcc-uip-overflow-uip -n 2 -o ${WORKPATH}/test/uip-overflow -t 10m
 
 -Campaign Runner: build and run fuzzing experiments-
 
 ...
 
 Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
-[+] Docker Image symcc-contiki-ground-truth-uip-overflow-uip built.
+[+] Docker Image fuzz-symcc-uip-overflow-uip built.
 
 [+] Run 2 trial(s):
-    - of symcc-contiki-ground-truth-uip-overflow-uip
+    - of fuzz-symcc-uip-overflow-uip
     - for 10m
-    - at 2022-05-04 05:41
+    - at 2022-08-01 17:39
     - output folders: ${WORKPATH}/test/uip-overflow
 
 [+] Launch symcc_1 (log in ${WORKPATH}/test/uip-overflow/run1/symcc)
@@ -119,18 +118,17 @@ Use 'docker scan' to run Snyk tests against images to find vulnerabilities and l
 The command `docker ps` shows the running containers:
 >output
 ```
-CONTAINER ID   IMAGE                                         COMMAND                  CREATED          STATUS          PORTS     NAMES
-ae30b58908a6   symcc-contiki-ground-truth-uip-overflow-uip   "bash -c 'source /ho…"   31 seconds ago   Up 31 seconds             practical_edison
-232076ab64e9   symcc-contiki-ground-truth-uip-overflow-uip   "bash -c 'source /ho…"   31 seconds ago   Up 31 seconds             determined_visvesvaraya
+CONTAINER ID   IMAGE                         COMMAND                  CREATED         STATUS         PORTS     NAMES
+9e776a008bb2   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             upbeat_roentgen
+1dffa87e651c   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             objective_dewdney
 ```
 >output
 
 The campaign is running, give SymCC some times to expose the vulnerability… After 10 minutes, the container should have finished, you can now compute the overview and .csv file with the command:
 
 ```
-perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl -csv=uip-overflow.csv -input=${WORKPATH}/test/uip-overflow/
+perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
 ```
-
 >output
 ```
   -- Campaign Result Printer -- 
@@ -154,6 +152,43 @@ uip-overflow.csv written.
 According to this instance, only one SymCC's trial exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds). Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
 > Note: Fuzzing campaigns are greedy in disk-usage and memory. Please be sure you have sufficient resource before running campaigns and frequently clean Docker's images and campaign's logs.
+
+### Evaluate a Tool
+
+The results shown in the previous section use multiple binaries to report bad inputs. It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers. We provide a second script to evaluate a corpus from a campaign using a specific and determined configuration.
+
+####  Feeding corpora for evaluation
+
+The data contains a folder corpus with all corpora from section 3.
+To run them on the fuzzing target with 
+AddressSanitizer instrumentation added run the next command:
+```
+${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/gt_corpuses/uIP/ ${WORKPATH}/test/corpus asan
+```
+
+The script builds a docker image for each tool and runs the witness verification. (it so take a while)
+After all corpora has been checked you can run the 'print_campaign_overview.pl' to see the result.
+
+```
+perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-overflow
+```
+
+
+####  Corpus Generation
+[ubuntu only]
+
+First you need to compute the corpus from the run by gathering all the generated input files:
+```
+${WORKPATH}/benchmark/suites-management/script/gather_corpus.sh uip-overflow ${WORKPATH}/test ${WORKPATH}/test/corpus
+```
+>output 
+```
+???
+```
+>output
+
+
+
 
 ## Reproduce Paper Results
 
@@ -193,249 +228,22 @@ Values for <tool> (option -f): `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`,
 
 Values for <vulnerability> (option -b): `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`. 
 
-### To reproduce 4.3 --old-version--
+### To reproduce 4.3
 
-The experiment consists in feeding corpuses from a fuzzing campaign to different binaries.
-For the example, which is building EffectiveTypeSanitizer, only one Docker image needs to be computed in order to set the good configuration for Contiki-NG and the target binary. However, all the files from those corpuses need to be fed (twice) to the binary, so it lasts a bit of time (one hour for a MacBook Pro Retina).
+The experiment in Section 4.3 consists in feeding corpora from the 'standard' fuzzing campaigns, i.e. with the usual tool's instrumentation, to a sanitizer.
 
+More precisely, for computing the right columns of Table~13 we ran:
 ```
-fixname=uip-len; \
-inputfolder=${WORKPATH}/data/corpuses/uip-len; \
-outputfolder=${WORKPATH}/test/FC-with-EffSan/${fixname}; \
-instrumentation=effectivesan; \
-mkdir -p ${outputfolder}; \
-pushd ${WORKPATH}/corpuses/docker \
-&& for tool in ${inputfolder}/*; do \
-   base_tool=$(basename ${tool}) \
-   && mkdir -p ${outputfolder}/${base_tool} \
-   && for trial in ${tool}/corpuses_run*; do \
-     nb_run=$(basename ${trial}) \
-     && ./validate-witnesses.sh --validation -f ${fixname} -i ${trial} --output ${outputfolder}/${base_tool}/${nb_run} -h ${instrumentation}; \
-   done; \
-done; popd
-
-```
-```
-fixname=uip-len; \
-inputfolder=${WORKPATH}/data/corpuses/${fixname}; \
-outputfolder=${WORKPATH}/test/FC-with-EffSan/${fixname}; \
-instrumentation=effectivesan; \
-mkdir -p ${outputfolder}; \
-pushd ${WORKPATH}/benchmark/suites-management \
-&& for tool in ${inputfolder}/run1/*; do \
-  base_tool=$(basename ${tool}) \
-  && BUILD_ONLY=1 ./run-ground-truth-campaign.sh --san ${instrumentation} -b ${fixname} -f ${base_tool}; \
-  for trial in ${fuzzingcampaign}/*; do \
-    nb=$(basename $trial) \
-    && mkdir -p "${outputfolder}/${nb}/";  \
-    && INPUT=${trial}/${base_tool} ./run-ground-truth-campaign.sh --san ${instrumentation} -b ${fixname} -f ${base_tool} --output ${outputfolder}/${nb}; \
-    sleep 2; \
-    done; \
-  sleep 600;
-  done; popd
+${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh <v> <i> asan
 ```
 
->output
+Similarly, for computing the right columns of Table~14 we ran:
+```
+${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh <v> <i> effectivesan
 ```
 
--Contiki-NG Ground Truth script for witnesses validation-
+With <v> the corresponding vulnerabilities and <i> the path to a set of tool's corpus folders.
 
-  - file ${WORKPATH}/data/corpuses/uip-len/afl-clang-fast/corpuses_run1/corpus-timestamps-run1 found to associate timestamps.
-[+] Check for uip-len witnesses with instrumentation effectivesan
-  - ... commit found: b5d997fb5cbe20ac9812558eb71bda746142a253.
-[+] Configure for: uip...
-[+] Write .env files...
-[+] Docker Image validate-uip-len-effectivesan already exist.
-
-[+] Run Docker Image validate-uip-len-effectivesan output folder in: ${WORKPATH}/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run1:
-Error response from daemon: No such container: b19b6b2c22f3
-[+] Container terminated.
-    - witnesses found:        0
-
--Contiki-NG Ground Truth script for witnesses validation-
-
-  - file ${WORKPATH}/data/corpuses/uip-len/afl-clang-fast/corpuses_run10/corpus-timestamps-run10 found to associate timestamps.
-[+] Check for uip-len witnesses with instrumentation effectivesan
-  - ... commit found: b5d997fb5cbe20ac9812558eb71bda746142a253.
-[+] Configure for: uip...
-[+] Write .env files...
-[+] Docker Image validate-uip-len-effectivesan already exist.
-
-[+] Run Docker Image validate-uip-len-effectivesan output folder in: ${WORKPATH}/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run10:
-Error response from daemon: No such container: f461692489f7
-[+] Container terminated.
-    - witnesses found:       14
-
-
-```
->output
-
-While waiting, you can browse the validation outputs (just make sure the trial has been already validated):
-
-```
- cat ${WORKPATH}/test/FC-with-EffSan/uip-len/afl-gcc/corpuses_run10/log/validation.log
-```
->output
-```
-
- -- Report bad inputs and witnesses for Contiki-NG Ground Truth benchmark -- 
-
-[+] Working directory:  /home/benchng/validation
- - check witnesses for uip-len
-[+] Processing /home/benchng//files-to-validate/inputs with script effectivesan [+]
-
-Cloning into '/home/benchng/validation/put-repository'...
-Check fix uip-len <b5d997fb5c:8340735cf5>
- 	[+] Build target at b5d997fb5c.
-Note: checking out 'b5d997fb5cbe20ac9812558eb71bda746142a253'.
-
-You are in 'detached HEAD' state. You can look around, make experimental
-changes and commit them, and you can discard any commits you make in this
-state without impacting any branches by performing another checkout.
-
-If you want to create a new branch to retain commits you create, you may
-do so (now or later) by using -b with the checkout command again. Example:
-
-  git checkout -b <new-branch-name>
-
-HEAD is now at b5d997f... Merge pull request #867 from nvt/fix-rpl-ext-header-removal
-	[+] Compiling with effectivesan at /home/benchng/validation/harness/. --
- 	[+] Build target at 8340735cf5.
-Previous HEAD position was b5d997f... Merge pull request #867 from nvt/fix-rpl-ext-header-removal
-HEAD is now at 8340735... Merge pull request #871 from nvt/check-uip-len
-	[+] Compiling with effectivesan at /home/benchng/validation/harness/. --
- - Targets ready.... - Check inputs...
- -- Report inputs exposed by a target -- 
-
-[+] Execute 499 inputs
-.xx.xx.xxxx..xx..xx..xx..x............................................................................................................................................................................................................................................................................................................................................................x.....................x.............................x.........x..............................................................
-[+] contiki-ground-truth.effectivesan exposed 19 bad inputs in /home/benchng//files-to-validate/inputs [+]
-
- -- Report inputs exposed by a target -- 
-
-[+] Execute 499 inputs
-.xx.xx.xxxx..xx..xx..xx..x............................................................................................................................................................................................................................................................................................................................................................x.....................x......................................................................................................
-[+] contiki-ground-truth.effectivesan exposed 17 bad inputs in /home/benchng//files-to-validate/inputs [+]
-Done: 2 witnesses detected.
-[+] Triage witnesses [+]
-Done.
-```
->output
-
-Trial report and witnesses are in `${WORKPATH}/test/FC-with-EffSan/uip-len/afl-gcc/corpuses_run10/validation`:
-
-```
-cat ${WORKPATH}/test/FC-with-EffSan/uip-len/afl-gcc/corpuses_run10/validation/uip-len-witnesses.txt 
-c    contiki-ground-truth.effectivesan id:000207,src:000189,op:havoc,rep:4                                                        2655
-c    contiki-ground-truth.effectivesan id:000212,sync:afl-master,src:000207                                                       2657
-```
-
-Once the validation ended, run the overview printer:
-
-```
-perl ${WORKPATH}/corpuses/docker/collect_campaign_witnesses.pl -input=${WORKPATH}/test/FC-with-EffSan/uip-len
-```
-
->output
-```
- 
- -- Campaign Witnesses Collector -- 
-
-[+] Collect 8 tools and 10 trials
--- afl-clang-fast                :timeout    :timeout    :1431       :timeout    :timeout    :850        :3478       :timeout    :831        :758        :
--- afl-gcc                       :2945       :timeout    :timeout    :1433       :1335       :timeout    :53615      :1129       :25795      :2655       :
--- angora                        :33233      :timeout    :49609      :1025       :5315       :timeout    :1509       :1707       :1012       :1189       :
--- honggfuzz                     :timeout    :timeout    :timeout    :timeout    :timeout    :timeout    :timeout    :timeout    :timeout    :timeout    :
--- intriguer                     :849        :813        :3599       :timeout    :7654       :1508       :785        :859        :timeout    :731        :
--- mopt                          :timeout    :timeout    :timeout    :timeout    :timeout    :829        :1099       :1163       :timeout    :27058      :
--- qsym                          :2722       :1651       :14091      :952        :6223       :6141       :3331       :1086       :timeout    :timeout    :
--- symcc                         :1190       :1237       :789        :6544       :933        :906        :timeout    :970        :896        :768        :
------------------
--- afl-clang-fast                :       5:1470   (00:24:30)
--- afl-gcc                       :       7:12701  (03:31:41)
--- angora                        :       8:11825  (03:17:05)
--- honggfuzz                     :       0:0      (00:00:00)
--- intriguer                     :       8:2100   (00:35:00)
--- mopt                          :       4:7537   (02:05:37)
--- qsym                          :       8:4525   (01:15:25)
--- symcc                         :       9:1581   (00:26:21)
------------------
-I found 4 different stack traces
-Unique witness set:
-In: /Users/poncelet/ase22_contiki-ng-benchmark_artifact/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run7/validation/before_uip-len/triage/3249274650.san-stacktrace
-id:000148,sync:afl-slave,src:000151 -- 
-In: /Users/poncelet/ase22_contiki-ng-benchmark_artifact/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run10/validation/before_uip-len/triage/3174791183.san-stacktrace
-id:000150,src:000144,op:havoc,rep:16 -- 
-In: /Users/poncelet/ase22_contiki-ng-benchmark_artifact/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run6/validation/before_uip-len/triage/1546341169.san-stacktrace
-id:000175,sync:afl-slave,src:000179,+cov -- 
-In: /Users/poncelet/ase22_contiki-ng-benchmark_artifact/test/FC-with-EffSan/uip-len/afl-clang-fast/corpuses_run3/validation/before_uip-len/triage/2444726330.san-stacktrace
-id:000142,src:000138+000012,op:splice,rep:16 -- 
-```
->output 
-
-You can see the witnesses detected by EffectiveSanitizer from the corpuses of uIP-len of Section 3.
-
-
-— (old version)
-
-
-## Basic Usage: Feeding Corpuses to Sanitizers
-(experimental)
-
-Now that you have launched a fuzzing campaign, you can collect the trials' corpus:
-```
-//create your corpus folder for SymCC trial1
-mkdir -p ${WORKPATH}/test/corpuses/symcc/inputs
-
-cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/queue/* ${WORKPATH}/test/corpuses/symcc/inputs
-
-cp -r ${WORKPATH}/test/uip-overflow/run1/symcc/sync_folder/*/crashes/* ${WORKPATH}/test/corpuses/symcc/
-
-//Feed the files to AFL-EffectiveSanitizer targets with SymCC configuration
-//Unfortunately, the output folder name is constrained according to the vulnerability name, be sure you follow the pattern <fixname>-corpuses-<fixname>
-mkdir -p ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc
-
-fixname=uip-overflow; pushd $WORKPATH/corpuses/docker; ./validate-witnesses.sh --validation --triage -f ${fixname} -i ${WORKPATH}/test/corpuses/symcc -h effectivesan --output ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc; popd
-```
-(Notice that SymCC-EffectiveSan is the longest docker image to build and lasted 2266.1s for a MacBook Pro Retina to finish)
-
->output
-```
--Contiki-NG Ground Truth script for witnesses validation-
-
-[+] Check for uip-overflow witnesses with instrumentation effectivesan
-  - ... commit found: a1cba5607c44514a9644333b6ca0a9a5e0f3c59e.
-[+] Configure for: uip...
-[+] Write .env files...
-...
-
-[+] Run Docker Image validate-uip-overflow-effectivesan output folder in: ${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses/run1/symcc:
-Error response from daemon: No such container: 19f8508fb5f9
-[+] Container terminated.
-    - witnesses found:        0
-```
->output
-
-Finally, you can have the result overview using the script:
-```
-perl ${WORKPATH}/corpuses/docker/collect_campaign_witnesses.pl -input=${WORKPATH}/data/uip-overflow-corpuses-uip-overflow/uip-overflow-corpuses
-```
-
->output
-```
- -- Campaign Witnesses Collector -- 
-
-[+] Collect 1 tools and 1 trials
--- run1
-                         :timeout :
------------------
--- run1
-                         :       0:0      (00:00:00)
------------------
-I found 0 different stack traces
-Unique witness set:
-```
->output
 
 ## Other 
 

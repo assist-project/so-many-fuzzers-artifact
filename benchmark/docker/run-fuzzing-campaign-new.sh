@@ -76,6 +76,11 @@ while test $# -gt 0; do
         shift
         ;;
 
+      --effectivesan)
+          SANITIZE="$2"
+          shift
+          ;;
+
     --fuzzer|-f)
         TRIAL_FUZZER="$2"
         shift
@@ -253,4 +258,4 @@ echo
 echo "[+] Launch ${TRIAL_FUZZER} (log in ${REAL_OUTPUT}/${TRIAL_FUZZER})"
 run_trial "${REAL_OUTPUT}/${TRIAL_FUZZER}" &
 
-printf "[+] ... Fuzzing In Progress ... [+]\n\n"
+printf "[+] ... Feeding Corpora to $SANITIZE ... [+]\n\n"

@@ -108,7 +108,7 @@ function set_environment_for_fuzzer {
 		honggfuzz)
 			if [ -z "${WITNESS_ORACLE}" ]; then WITNESS_ORACLE="hfuzz-clang"; fi
 			;;
-		*)	
+		*)
 	esac
 }
 
@@ -218,7 +218,7 @@ if [ -z "${FUZZER}" ]; then error_usage "Choose a fuzzer to evaluate (option -f)
 #if [[ "${FUZZER}" = "savior" ]] && [[ "${SANITIZER}" = "effectivesan" ]];
 #then
 #	error_usage "SAVIOR cannot run with EffectiveSanitizer."
-#fi 
+#fi
 ## implicit with ground truth fuzzing (paper's configuration)
 TARGET=contiki-ground-truth
 HARNESS=contiki-ng-fuzzing
@@ -312,7 +312,12 @@ fi
 
 
 ##### Auto TAG if not set
-if [ -z "$TAG" ]; then TAG="${FUZZER}-${TARGET}-${FIXNAME}-${ENTRY_POINT}"; fi
+if [ -z "$TAG" ]; then
+  TAG="fuzz-${FUZZER}-${FIXNAME}-${ENTRY_POINT}"
+  if [ ! -z "${SANITIZER}" ]; then
+   TAG="${TAG}-${SANITIZER}";
+ fi
+fi
 #####
 
 FUZZER_PATH=${ROOT_PATH}/fuzzers/${FUZZER}
