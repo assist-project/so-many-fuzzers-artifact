@@ -414,6 +414,8 @@ sub execute_inputs {
       companion_check(\@undetected_crash, $commit, $verbose);
     #}
 
+    print "\n";
+
     if (defined $afl_per_commit{$commit}) {
       print "\t[-] Detected " . int(@{$afl_per_commit{$commit}}) . " bad inputs.\n";
       ## remove detected files from folder to detect
@@ -896,8 +898,10 @@ sub reproducibility_check {
     $cpt_san, $cpt_aflasan);
 }
 
-## check return value after executing an input file
-## we want crashes or timeouts
+### Check target's status value after executing an input file
+# - return 0 if nothing bad detected    (print .)
+# - return 1 if deadly signal detected  (print x)
+# - return 2 if timeout detected        (print h)
 ## ref: https://perldoc.perl.org/perlvar#$?
 sub print_status {
   my $status = shift;
@@ -906,10 +910,10 @@ sub print_status {
   elsif ($status & 127) {printf "died with signal %d, %s coredump XXX\n", ($status & 127),  ($status & 128) ? 'with' : 'without' if($verbose); return 1;}
   else
   { #we specified an exit code for sanitizers
-    if ($status >> 8 == 139)   {printf "san-exit with value %d error detected XXX\n", $status >> 8 if($verbose); return 1;}
-    elsif($status >> 8 == 134) {printf "ubsan-exit with value %d error detected XXX\n", $status >> 8 if($verbose); return 1;}
-    elsif($status >> 8 == 124) {printf "timeout (> $timeout seconds): hang detected XXX\n" if($verbose); return 2;}
-    else                       {printf "exit with value %d\n", $status >> 8 if($verbose); return 0;}
+    if ($status >> 8 == 139)   {printf "x" if($verbose); return 1;}
+    elsif($status >> 8 == 134) {printf "x" if($verbose); return 1;}
+    elsif($status >> 8 == 124) {printf "h" if($verbose); return 2;}
+    else                       {printf "." if($verbose); return 0;}
   }
 }
 ### --------- Check mode
