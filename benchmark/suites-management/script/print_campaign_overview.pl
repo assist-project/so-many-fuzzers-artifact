@@ -127,7 +127,7 @@ foreach my $i (sort {$a <=> $b} keys %raw_data) {
 			my $file_name;
 			my $time_to_exposure;
 
-			if ($earliest_witness =~ /(id.*|SIG.*)\s+(\d+)/)
+			if ($earliest_witness =~ /(id.*|SIG.*|.*honggfuzz.*)\s+(\d+)/)
 				{$file_name=$1;$time_to_exposure=int($2);}
 
 			printf("%-20s :", $time_to_exposure);

@@ -18,7 +18,7 @@ outputfolder=$3; \
 pushd ${WORKPATH}/benchmark/targets/contiki-ground-truth/container-script; \
 for tool in ${inputfolder}/${fixname}/run1/*; do \
  base_tool=$(basename ${tool}); \
- mkdir -p $WORKPATH/${outputfolder}/${fixname}; \
- ./collect-corpuses.sh ${inputfolder}/${fixname} ${base_tool} ${outputfolder}/${fixname}/${base_tool}; \
+ mkdir -p $WORKPATH/${outputfolder}/${fixname}-corpuses; \
+ ./collect-corpuses.sh ${inputfolder}/${fixname} ${base_tool} ${outputfolder}/${fixname}-corpuses/${base_tool}; \
 done; \
 popd

@@ -104,7 +104,7 @@ do
     fi
 
     mkdir -p $output_folder
-    echo $input_folder/queue/id* | xargs cp -t $output_folder
+    echo $input_folder/queue/* | xargs cp -t $output_folder
     echo $output_folder/* | xargs rename "s/$/:$fuzzerfolder/"
     echo $output_folder/* | xargs mv -t $QUEUE_DIR
     rm -fr $output_folder
