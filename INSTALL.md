@@ -9,6 +9,7 @@ Both the raw data and the fuzzing framework are available with the public link i
 For the benchmark to run properly, you must install:
 - [Docker](https://docs.docker.com/engine/install/), and
 - the Perl module `Array::Utils` (`sudo cpan install Array::Utils`).
+- For AFL, you need to run `echo core >/proc/sys/kernel/core_pattern` with root (`su`).
 
 ### Unpack
 
@@ -22,17 +23,17 @@ ls $WORKPATH
 ```
 `>output`
 ```
-INSTALL.md	README.md	benchmark	data-220727.tar
+INSTALL.md  README.md  ase2022-so-many-fuzzers.pdf  benchmark  data-220727.tar
 ```
 `>output`
 
-Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder. The content should be the files README.md, and INSTALL.md, the folder benchmark and the raw-data archive 'data-220727.tar'.
+Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder. The content should be the files LICENSE.md, README.md, and INSTALL.md, the folder benchmark, the paper ase2022-so-many-fuzzers.pdf (draft version) and the raw data archive 'data-220727.tar'.
 
 > Notice, that we denote the expected outputs from a command with the tag `>output`
 
 ### Experiment Data
 
-The experiment data are archived into `data-220727.tar`. We also provide a script to show the raw-data and the data as formatted into the paper. Executing the next commands will print raw-data and Table 3's row for uIP-overflow.
+The experiment data are archived into `data-220727.tar`. We also provide a script to show the raw data and the data as formatted into the paper (trials:mean-time-to-exposure). Executing the next commands will print the raw data and Table 3's row for uIP-overflow.
 
 ```
 cd $WORKPATH
@@ -72,16 +73,16 @@ perl $WORKPATH/benchmark/suites-management/script/print_csv_overview.pl -input=$
 
 ## Get Started 
 
-The experiment consists in launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers. We give you first a small example to check that everything is working well and depict next the commands we ran for reproducing the paper's results.
+The experiment consists in launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers. We give you first a small example to check that everything is working well and depict next the commands to reproduce the paper's results.
 
-For the example, we launch _symcc_ for _uip-overflow_ vulnerability and with a timeout of _10_ minutes.
+**Example**: we launch _symcc_ for _uip-overflow_ vulnerability with a timeout of _10_ minutes (leave also ~2 minutes for the validation).
 
 Running the following commands will launch the campaign:
 ```
 mkdir -p ${WORKPATH}/test \
   && ${WORKPATH}/benchmark/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
 ```
->output
+`>output`
 ```
 
 -Contiki-NG Ground Truth Campaign Configuration-
@@ -113,23 +114,23 @@ Use 'docker scan' to run Snyk tests against images to find vulnerabilities and l
 [+] Launch symcc_2 (log in ${WORKPATH}/test/uip-overflow/run2/symcc)
 [+] ... Fuzzing In Progress ... [+]
 ```
->output (building time 529.0s on a MacBook Pro)
+`>output` (building time 529.0s on a MacBook Pro)
 
 The command `docker ps` shows the running containers:
->output
+`>output`
 ```
 CONTAINER ID   IMAGE                         COMMAND                  CREATED         STATUS         PORTS     NAMES
 9e776a008bb2   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             upbeat_roentgen
 1dffa87e651c   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             objective_dewdney
 ```
->output
+`>output`
 
-The campaign is running, give SymCC some times to expose the vulnerability… After 10 minutes, the container should have finished, you can now compute the overview and .csv file with the command:
+OK, the campaign is running. Give SymCC some times to expose the vulnerability… After 15 minutes, the container should have finished, you can now compute the overview and .csv file with the command:
 
 ```
 perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
 ```
->output
+`>output`
 ```
   -- Campaign Result Printer -- 
 
@@ -147,7 +148,7 @@ uip-overflow.csv written.
 -- symcc                         :       1:234    (00:03:54)
 -----------------
 ```
->output
+`>output`
 
 According to this instance, only one SymCC's trial exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds). Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
@@ -155,19 +156,17 @@ According to this instance, only one SymCC's trial exposed _uip-overflow_ after 
 
 ### Evaluate a Tool
 
-The results shown in the previous section use multiple binaries to report bad inputs. It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers. We provide a second script to evaluate a corpus from a campaign using a specific and determined configuration.
+The results shown in the previous section use multiple binaries to report bad inputs. It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers. We provide a second script to evaluate a corpus from a campaign using a specific binary.
 
 ####  Feeding corpora for evaluation
 
-The data contains a folder corpus with all corpora from section 3.
-To run them on the fuzzing target with 
-AddressSanitizer instrumentation added run the next command:
+In the folder `data`, corpora from our experiment on uip-len are stored.
+To feed them to the target with AddressSanitizer instrumentation runs the next command:
 ```
 ${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/gt_corpuses/uIP/ ${WORKPATH}/test/corpus asan
 ```
 
-The script builds a docker image for each tool and runs the witness verification. (it so take a while)
-After all corpora has been checked you can run the 'print_campaign_overview.pl' to see the result.
+The script builds a docker image for each tool and runs the evaluation. After that all the corpora have been checked, (it may last some time), you can run the 'print_campaign_overview.pl' to see the result.
 
 ```
 perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-overflow
@@ -175,20 +174,93 @@ perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  
 
 
 ####  Corpus Generation
-[ubuntu only]
+[Ubuntu only]
 
-First you need to compute the corpus from the run by gathering all the generated input files:
+We provide a script to gather all inputs from a campaign and create a corpus. However, this uses the `rename` command, which you should install (`sudo apt-get install rename` for Ubuntu like OS). It is not mandatory, but there are identical filenames from different input types (hangs/inputs/crashes) that will be lost without it.
+
+To generate a corpus for the example above, run the command:
 ```
-${WORKPATH}/benchmark/suites-management/script/gather_corpus.sh uip-overflow ${WORKPATH}/test ${WORKPATH}/test/corpus
+export WORKPATH && ${WORKPATH}/benchmark/suites-management/script/gather_corpus.sh uip-overflow  ${WORKPATH}/test/  ${WORKPATH}/test/corpuses
 ```
->output 
+with gather_corpus.sh <vulnerability> <path_to_campaign> <output_folder>
+
+`>output`
 ```
-???
+-Corpus Gathering-
+  - fixname         :uip-overflow
+  - inputfolder     :/home/clemp/so-many-fuzzers-artifact/test/
+  - outputfolder    :/home/clemp/so-many-fuzzers-artifact/test/corpuses
+~/so-many-fuzzers-artifact/benchmark/targets/contiki-ground-truth/container-script ~/so-many-fuzzers-artifact
+sync at: ${WORKPATH}/so-many-fuzzers-artifact/test//uip-overflow/run1/symcc/sync_folder
+- Collecting 107 inputs from afl-master -
+- Collecting 115 inputs from afl-slave -
+- Collecting 88 inputs from symcc -
+- Collecting crashes from afl-master -
+    3 crashes from afl-master.
+    2 hangs from afl-master.
+- Collecting crashes from afl-slave -
+    2 crashes from afl-slave.
+    2 hangs from afl-slave.
+- Collecting crashes from symcc -
+    1 crashes from symcc.
+    symcc/hangs empty.
+sync at: ${WORKPATH}/so-many-fuzzers-artifact/test//uip-overflow/run2/symcc/sync_folder
+- Collecting 123 inputs from afl-master -
+- Collecting 131 inputs from afl-slave -
+- Collecting 128 inputs from symcc -
+- Collecting crashes from afl-master -
+    2 crashes from afl-master.
+    3 hangs from afl-master.
+- Collecting crashes from afl-slave -
+    3 crashes from afl-slave.
+    2 hangs from afl-slave.
+- Collecting crashes from symcc -
+    2 crashes from symcc.
+    symcc/hangs empty.
+~/so-many-fuzzers-artifact
+
 ```
->output
+`>output`
+
+>Notice that a corpus not only stores inputs generated from a campaign but also their timestamps, which can unfortunately be lost otherwise when manipulating the files.
+
+Finally, try to validate evaluate the uip-overflow campaign with AFL-clang-Asan with the two next commands.
+
+```
+${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/test/corpuses/ ${WORKPATH}/test/results-with-asan asan
+```
+
+```
+perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/results-with-asan/uip-overflow
+```
+
+`>output`
+```
+  -- Campaign Result Printer -- 
+
+[+] Collect 1 tools and 2 trials
+
+ Raw Data from /home/clemp/so-many-fuzzers-artifact/test/results-with-asan/uip-overflow:
+
+            symcc               :
+-- run 1  :89                   :
+-- run 2  :93                   :
+-----------------
+ NBTrial and Mean Time to Exposure from /home/clemp/so-many-fuzzers-artifact/test/results-with-asan/uip-overflow :
+-- symcc                         :       2:91     (00:01:31)
+-----------------
+```
+`>output`         
+
+With AFL-Clang-Asan both trials detected uip-overflow and in 1 minutes 31 seconds in average!
 
 
+That finishes our starter example, you can now:
+- run a fuzzing campaign with the tool/vulnerability/sanitizer you want and all this with -n instances,
+- collect each run's corpus, and 
+- evaluate the detected vulnerabilities with standard or sanitized targets.
 
+! Happy fuzzing !
 
 ## Reproduce Paper Results
 
@@ -249,7 +321,7 @@ With <v> the corresponding vulnerabilities and <i> the path to a set of tool's c
 
 ### Structure of a campaign folder:
 `tree -L 5 ${WORKPATH}/test/uip-overflow`
->output
+`>output`
 ```
 ${WORKPATH}/test/uip-overflow
 ├── run1
@@ -335,7 +407,7 @@ ${WORKPATH}/test/uip-overflow
 
 42 directories, 38 files
 ```
->output (the output can change if SymCC found a witness or not)
+`>output` (the output can change if SymCC found a witness or not)
 
 The output folder is composed of one folder per trial (named `run<i>`),
 containing one folder per tool (give the same output folder to add another tool in the corresponding run<i>). 
