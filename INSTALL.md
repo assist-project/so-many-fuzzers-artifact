@@ -33,16 +33,16 @@ Its contents should include the files LICENSE.md, README.md, and INSTALL.md (thi
 
 ### Experiment Data
 
-The experiment data are archived in `data-220727.tar`.
+The experiment data are archived in `data-220803.tar`.
 We also provide a script to show the raw data and the data as formatted into the paper (trials:mean-time-to-exposure).
 Executing the next commands will print the raw data and Table 3's row for uIP-overflow.
 
 ```bash
 > cd $WORKPATH
-> tar -xf data-220727.tar
+> tar -xf data-220803.tar
 > perl $WORKPATH/src/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
 
- -- Campaign CSV Printer -- 
+ -- Campaign CSV Printer --
 
  Raw Data from $WORKPATH/data/3.1/uIP/uip-overflow.csv:
 
@@ -70,7 +70,7 @@ Executing the next commands will print the raw data and Table 3's row for uIP-ov
 -----------------
 ```
 
-## Getting Started 
+## Getting Started
 
 The experiments consist of launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers.
 
@@ -131,7 +131,7 @@ You can now compute the overview and .csv file with the command:
 ```bash
 > perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
 
-  -- Campaign Result Printer -- 
+  -- Campaign Result Printer --
 
   - write raw-data into uip-overflow.csv.
 [+] Collect 1 tools and 2 trials
@@ -167,15 +167,15 @@ We provide a second script to evaluate a corpus from a campaign using a specific
 In the folder `data`, corpora from our experiment on uip-len are stored.
 To feed them to the target with AddressSanitizer instrumentation runs the next command:
 ```sh
-> ${WORKPATH}/src/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/gt_corpuses/uIP/ ${WORKPATH}/test/corpus asan
+> ${WORKPATH}/src/suites-management/script/validate_corpus.sh uip-len ${WORKPATH}/data/corpuses ${WORKPATH}/test/corpus asan
 ```
 
 The script builds a docker image for each tool and runs the evaluation.
-After all the corpora have been checked (this may take some time), you
+After all the corpora have been checked (about 2 hours), you
 can run the `print_campaign_overview.pl` script to see the result.
 
 ```sh
-> perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-overflow
+> perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-len
 ```
 
 
@@ -233,7 +233,7 @@ Finally, try to validate evaluate the uip-overflow campaign with AFL-clang-Asan 
 
 > perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/results-with-asan/uip-overflow
 
-  -- Campaign Result Printer -- 
+  -- Campaign Result Printer --
 
 [+] Collect 1 tools and 2 trials
 
@@ -254,7 +254,7 @@ This finishes our starter example.
 
 You can now:
 - run a fuzzing campaign with the tool/vulnerability/sanitizer you want and all this with -n instances,
-- collect each run's corpus, and 
+- collect each run's corpus, and
 - evaluate the detected vulnerabilities with standard or sanitized targets.
 
 Happy fuzzing!
@@ -286,16 +286,16 @@ The paper's raw-data are in `${WORKPATH}/data/4.1`.
 For Section 4.2, we ran a campaign with 10 trials for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the commands:
 ```bash
 > cd ${WORKPATH}/src/suites-management \
-> mkdir -p ${OUTPUT_FOLDER} 
+> mkdir -p ${OUTPUT_FOLDER}
 > ./run-ground-truth-campaign.sh --san effectivesan -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
 The paper's raw-data are in `${WORKPATH}/data/4.2`.
 
 ### Values for Tool and Vulnerability
 
-Values for `<tool>` (option `-f`) are: `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`. 
+Values for `<tool>` (option `-f`) are: `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`.
 
-Values for `<vulnerability>` (option `-b`) are: `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`. 
+Values for `<vulnerability>` (option `-b`) are: `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`.
 
 ### Section 4.3 Results
 
@@ -405,23 +405,24 @@ ${WORKPATH}/test/uip-overflow
 (The output may differ depending on whether SymCC found a witness or not.)
 
 The output folder is composed of one folder per trial (named `run<i>`),
-containing one folder per tool (give the same output folder to add another tool in the corresponding run<i>). 
+containing one folder per tool (give the same output folder to add another tool in the corresponding run<i>).
 
 A tool folder contains:
 - a _crash-triage_ giving details on the witnesses and bad inputs found,
 - a _log_ folder, and
 - a tool's instance folder (the AFL root folder in general).
 
-# Docker 
+# Docker
 
 * [docker help](https://docs.docker.com/engine/reference/commandline/cli/)
-    
+
 * `docker ps`: lists (running) containers (add option `-a` to include stopped containers).
-    
+
 * `docker rm`: remove one or more containers.
-    
+
 * `docker images`: lists (built) images.
-    
+
 * `docker rmi`: remove one or more images.
-    
+
 * `docker rm $(docker ps -a -q)`: remove all stopped containers (without stopping the running ones).
+
