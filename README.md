@@ -9,7 +9,7 @@ paper's results, we ran fuzzers for several 24-hour experiments) and, due
 to the nature of the fuzzers we have used, the results are non-deterministic.
 
 For the artifact's evaluation, we provide:
- 1. The raw data that we used to create Tables 3 to 12 and
+ 1. The raw data that we used to create Tables 3 to 12.
  2. The framework (Dockerfiles and scripts) to reproduce and launch fuzzing campaigns with the paper's configurations.
  3. A copy of the paper, as it was submitted to ASE'2022.
     (Note that this paper will be removed from the repo once the final revision of the paper is ready.)
