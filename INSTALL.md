@@ -1,6 +1,6 @@
 # Artifact Instructions
 
-Both the raw data and the fuzzing framework are available with the public link in Zenodo:
+Both the raw data and the fuzzing framework are available with the public link in Zenodo: https://zenodo.org/badge/latestdoi/518939596
 
 ## Obtain and Install the Artifact
 
