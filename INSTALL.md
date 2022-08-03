@@ -20,22 +20,16 @@ To install the artifact, just download the .tar from Zenodo or clone its GitHub 
 
 Here are the commands for the .tar archive:
 
-```
-tar -xf so-many-fuzzers-artifact.tar
-cd so-many-fuzzers-artifact
-WORKPATH=$PWD
-ls $WORKPATH
-```
-`>output`
-```
+```bash
+> tar -xf so-many-fuzzers-artifact.tar
+> cd so-many-fuzzers-artifact
+> export WORKPATH=$PWD
+> ls $WORKPATH
 INSTALL.md  README.md  LICENSE.md  ...
 ```
-`>output`
 
 Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder.
 Its contents should include the files LICENSE.md, README.md, and INSTALL.md (this file).
-
-Notice that we denote the expected output from a command with the tag `>output`.
 
 ### Experiment Data
 
@@ -43,13 +37,11 @@ The experiment data are archived into `data-220727.tar`.
 We also provide a script to show the raw data and the data as formatted into the paper (trials:mean-time-to-exposure).
 Executing the next commands will print the raw data and Table 3's row for uIP-overflow.
 
-```
-cd $WORKPATH
-tar -xf data-220727.tar
-perl $WORKPATH/src/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
-```
-`>output`
-```
+```bash
+> cd $WORKPATH
+> tar -xf data-220727.tar
+> perl $WORKPATH/src/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
+
  -- Campaign CSV Printer -- 
 
  Raw Data from $WORKPATH/data/3.1/uIP/uip-overflow.csv:
@@ -77,7 +69,6 @@ perl $WORKPATH/src/suites-management/script/print_csv_overview.pl -input=$WORKPA
 -- symcc                         :      10:99     (00:01:39)
 -----------------
 ```
-`>output`
 
 ## Get Started 
 
@@ -87,12 +78,9 @@ Let us first see a small example to check that everything is working well and de
 **Example**: we launch _symcc_ for _uip-overflow_ vulnerability with a timeout of _10_ minutes (we suggest to also allow 2 minutes for the validation).
 
 Running the following commands will launch the campaign:
-```
-mkdir -p ${WORKPATH}/test \
-  && ${WORKPATH}/src/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
-```
-`>output`
-```
+```sh
+> mkdir -p ${WORKPATH}/test
+> ${WORKPATH}/src/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
 
 -Contiki-NG Ground Truth Campaign Configuration-
 
@@ -123,27 +111,25 @@ Use 'docker scan' to run Snyk tests against images to find vulnerabilities and l
 [+] Launch symcc_2 (log in ${WORKPATH}/test/uip-overflow/run2/symcc)
 [+] ... Fuzzing In Progress ... [+]
 ```
-`>output` (building time 529.0s on a MacBook Pro)
+The above command requires a building time of 529.0 seconds (i.e., about 10
+minutes) on a MacBook Pro.
 
 The command `docker ps` shows the running containers:
-`>output`
-```
+```bash
+> docker ps
 CONTAINER ID   IMAGE                         COMMAND                  CREATED         STATUS         PORTS     NAMES
 9e776a008bb2   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             upbeat_roentgen
 1dffa87e651c   fuzz-symcc-uip-overflow-uip   "bash -c 'source /ho…"   2 minutes ago   Up 2 minutes             objective_dewdney
 ```
-`>output`
 
 OK, the campaign is running.
 Give SymCC some time to expose the vulnerability.
 After about 15 minutes, the container should have finished.
 You can now compute the overview and .csv file with the command:
 
-```
-perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
-```
-`>output`
-```
+```bash
+> perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
+
   -- Campaign Result Printer -- 
 
   - write raw-data into uip-overflow.csv.
@@ -160,14 +146,16 @@ uip-overflow.csv written.
 -- symcc                         :       1:234    (00:03:54)
 -----------------
 ```
-`>output`
 
 According to these results, only one trial of SymCC exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds).
+
 Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
-> Note: Fuzzing campaigns are greedy in disk-usage and memory. Please be sure you have sufficient resources before running campaigns and frequently clean Docker's images and campaign's logs.
+**Note**: Fuzzing campaigns are greedy in disk-usage and memory.
+Please be sure you have sufficient resources before running campaigns
+and frequently clean Docker's images and campaign's logs.
 
-### Evaluate a Tool
+### Evaluate a Fuzzer
 
 The results shown in the previous section use multiple binaries to report bad inputs.
 It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers.
@@ -240,7 +228,7 @@ sync at: ${WORKPATH}/so-many-fuzzers-artifact/test//uip-overflow/run2/symcc/sync
 ```
 `>output`
 
->Notice that a corpus not only stores inputs generated from a campaign but also their timestamps, which can unfortunately be lost otherwise when manipulating the files.
+Notice that a corpus not only stores inputs generated from a campaign but also their timestamps, which can unfortunately be lost otherwise when manipulating the files.
 
 Finally, try to validate evaluate the uip-overflow campaign with AFL-clang-Asan with the two next commands.
 
@@ -306,7 +294,7 @@ cd ${WORKPATH}/src/suites-management \
 
 ### Section 4.2 Results
 
-For Section 4.2, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the command:
+For Section 4.2, we ran a campaign with 10 trials for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the command:
 ```
 cd ${WORKPATH}/src/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
@@ -314,7 +302,7 @@ cd ${WORKPATH}/src/suites-management \
 ```
 - The paper's raw-data are in `${WORKPATH}/data/4.2`.
 
-### Values for <tool> and <vulnerability>
+### Values for Tool and Vulnerability
 
 Values for <tool> (option -f) are: `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`. 
 
