@@ -1,5 +1,7 @@
 # Artifact of the ASE'2022 Paper "_So Many Fuzzers, So Little Time - Experience from Evaluating Fuzzers on the Contiki-NG Network (Hay)Stack_"
 
+[![DOI](https://zenodo.org/badge/518939596.svg)](https://zenodo.org/badge/latestdoi/518939596)
+
 This repository contains the artifact for the ASE'2022 paper with the
 title mentioned above.
 The paper contains detailed experiments from using eight mutation-based
