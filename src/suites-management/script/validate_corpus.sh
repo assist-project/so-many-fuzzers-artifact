@@ -26,11 +26,11 @@ echo "input: $inputfolder"; \
 mkdir -p ${outputfolder}; \
 for tool in ${inputfolder}/*; do \
   base_tool=$(basename ${tool}) \
-  && BUILD_ONLY=1 ${WORKPATH}/benchmark/suites-management/run-ground-truth-campaign.sh $option_san -b ${fixname} -f ${base_tool}; \
+  && BUILD_ONLY=1 ${WORKPATH}/src/suites-management/run-ground-truth-campaign.sh $option_san -b ${fixname} -f ${base_tool}; \
   for trial in ${tool}/corpuses_run*; do \
     nb=$(basename $trial) \
     && mkdir -p "${outputfolder}/${nb}/"  \
-    && INPUT=${trial} IS_CORPUS=1 ${WORKPATH}/benchmark/suites-management/run-ground-truth-campaign.sh $option_san -b ${fixname} -f ${base_tool} --output ${outputfolder}/${nb}; \
+    && INPUT=${trial} IS_CORPUS=1 ${WORKPATH}/src/suites-management/run-ground-truth-campaign.sh $option_san -b ${fixname} -f ${base_tool} --output ${outputfolder}/${nb}; \
     sleep 2; \
   done; \
   sleep 600;

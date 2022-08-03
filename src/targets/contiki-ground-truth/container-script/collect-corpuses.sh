@@ -19,7 +19,7 @@ for trial_path in ${INPUT_FOLDER}/run*; do
 	sync_path=$(ls -d ${trial_path}/${TOOL_FOLDER}/sync[-_]folder)
         echo "sync at: ${sync_path}"
 
-	#create output folder 'inputs' for trial input files
+	# create output folder 'inputs' for trial input files
 
 	if [ ! "${COLLECTOR_TYPE}" = crashes ];
 	then

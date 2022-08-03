@@ -9,7 +9,7 @@ printf "\n-Contiki-NG Ground Truth Campaign Configuration-\n\n"
 
 ## Define exceptions: Fuzzer having their own Dockerfile
 ## Map: {fuzzer-name -> Dockerfile_path}
-## Note: the docker build running the dockerfile is always run at the benchmark root folder
+## Note: the docker build running the dockerfile is always run at the root folder
 ##
 fuzzer_exceptions=( ["savior"]="fuzzers/savior/Dockerfile" )
 
@@ -118,7 +118,7 @@ unset TIMEOUT NB_TRIALS CORES SANITIZER TMPFS
 unset FIXNAME DO_BEFORE DO_AFTER
 unset WITNESS_ORACLE
 
-## main benchmark-ng folder
+## main folder
 ROOT_PATH=${ROOT_PATH:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"}
 ## default values
 TIMEOUT="1d"

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Install common dependencies for contiki-ng benchmark on Ubuntu16.04
+# Install common dependencies for contiki-ng on Ubuntu 16.04
 apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         apt-utils \

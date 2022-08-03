@@ -5,7 +5,7 @@ use warnings;
 use File::Basename;
 use Cwd 'abs_path';
 
-print "\n -- Crash triage for Contiki-NG Ground Truth benchmark -- \n\n";
+print "\n -- Crash triage for Contiki-NG Ground Truth experiment (new) -- \n\n";
 
 use File::Basename;
 use Hash::Util qw(hash_value);
@@ -78,17 +78,18 @@ if ($check) {
   print "[+] Checking ";
 
   if ($stack) {
-    print "crashing stacks in $stack from crashes in $crash_folder ";
+    print "crashing stacks in $stack from crashes in $crash_folder \n";
   } else {
-    print "crashes in $crash_folder ";
+    print "crashes in $crash_folder\n";
     check_crash_folder($crash_folder);
   }
 
 } else {
   do {usage();die "Error: No fix nor develop option\n"} if (not defined $fix and not defined $develop);
+  print "[+] Validating crashes in $crash_folder\n";
   check_crash_folder($crash_folder);
-  print "[+] Validating crashes in $crash_folder ";
 }
+
 
 ## check paths (because of chdir later)
 my $output_folder = ($output ? $output : "crash-triage");
@@ -120,8 +121,7 @@ my %commits;
 my $nb_bugfixes= int(keys %commits);
 my %crashes_per_commit;         #{commit} -> [san-warned_filenames]
 my %warning_per_commit;         #{commit} -> [valgrind-afl_filenames]
-my %aflsan_per_commit;          #{commit} -> [asan-afl_filenames]
-my %afl_gcc_per_commit;         #{commit} -> [aflgcc_filenames]
+my %afl_per_commit;             #{commit} -> [afl_filenames]
 my %undetected_per_commit;      #{commit} -> [undetected_filenames]
 my %uniq_bad_inputs_per_commit; ## unified list of crashing files
 ## crashes to step (set after every execute_inputs)
@@ -133,17 +133,11 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
 
   print "at $LAB_PATH ... setting SUT ...\n";
   # clone a fresh contiki-ng repo
-  `rm -fr contiki-ng` if (-d "contiki-ng");
-  `git clone https://github.com/contiki-ng/contiki-ng.git`;
+  `rm -fr contiki-ground-truth` if (-d "contiki-ground-truth");
+  `git clone https://github.com/contiki-ng/contiki-ng.git contiki-ground-truth`;
 
   # get contiki-ng-fuzzing harnesses and its configuration
-  `mkdir eval-build`;
-  `cp -r $ENV{HARNESS_PATH}/native-build/*       eval-build`;
-  `cp -r $ENV{HARNESS_PATH}/afl-build/*          eval-build`;
-  `sed -i "s|CONTIKI.*=.*\$|CONTIKI=../contiki-ng|" eval-build/Makefile`;
-  `cp    $ENV{HARNESS_PATH}/$ENV{HARNESS_NAME}.c .`;
-  `cp    $ENV{HARNESS_PATH}/contiki-setup.sh .`;
-  `cp -r $ENV{HARNESS_PATH}/configuration        configuration`;
+  `cp -r $ENV{HARNESS_PATH} eval-build`;
   print "[+] Setting done.\n\n";
 
   if ($check) {
@@ -179,6 +173,7 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
 
     ### --------- commit to validate (after fix)
     &execute_inputs($commit_to_validate, \@base_errors, 1);
+
     @{$uniq_bad_inputs_per_commit{$commit_to_validate}} = array_minus(@base_errors, @{$undetected_per_commit{$commit_to_validate}});
     my $crashes_after = int(@{$uniq_bad_inputs_per_commit{$commit_to_validate}});
 
@@ -197,14 +192,14 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
     if ((not $quiet) and (int(@witnesses) > 0)) {
     	print "\n[+] List of witnesses:\n";
     	foreach my $witness (sort (@witnesses)) {
-           print "     $witness\n";
+           print "     '$witness'\n";
       }
     }
 
      if ((not $quiet) and (int(@{$uniq_bad_inputs_per_commit{$commit_to_validate}}) > 0)) {
         print "[+] List of bad inputs after fix:\n";
         foreach my $bad_input (sort (@{$uniq_bad_inputs_per_commit{$commit_to_validate}})) {
-           print "     $bad_input\n";
+           print "     '$bad_input'\n";
         }
      }
 
@@ -212,7 +207,7 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
     ## undetected
     if (int(@{$undetected_per_commit{$commit_before}}) > 0) {
       `mkdir -p $output_folder/undetected`;
-      `mv $LAB_PATH/$commit_before/undetected $output_folder/undetected 2>/dev/null`;
+      `mv '$LAB_PATH/$commit_before/undetected' $output_folder/undetected 2>/dev/null`;
     }
     ## witnesses
     my $witness_report_file = "$output_folder/witnesses/witness-report.txt";
@@ -225,12 +220,12 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
       printf $FD "%-s %-12s %-90s %-s\n", "type", "step", "name", "time-to-exposure(s)";
       foreach my $witness (sort (@witnesses)) {
         my $step = $crash_data{$witness}[1];
-        `mv $LAB_PATH/$commit_before/$step/crashes/$witness $output_folder/witnesses/bad-inputs`;
-        `mv $LAB_PATH/$commit_before/$step/stacktraces/$witness-output.txt $output_folder/notfixed/stacktraces 2>/dev/null`;
+        `mv '$LAB_PATH/$commit_before/$step/crashes/$witness' $output_folder/witnesses/bad-inputs`;
+        `mv '$LAB_PATH/$commit_before/$step/stacktraces/$witness-output.txt' $output_folder/notfixed/stacktraces 2>/dev/null`;
         printf $FD "%-4s %-12s %-90s %-d\n", $crash_data{$witness}[0], $step, $witness, ($stamps? $crash_data{$witness}[2]:0000);
         # get and move hash stacks
         chomp(my $stackhash = `grep -l "$witness" $LAB_PATH/$commit_before/$step/stacktraces/*stacktrace 2>/dev/null`);
-        `cp $stackhash $output_folder/witnesses/` if(defined $stackhash and not (-e "$output_folder/witnesses/" . basename($stackhash)));
+        `cp '$stackhash' $output_folder/witnesses/` if(defined $stackhash and not (-e "$output_folder/witnesses/" . basename($stackhash)));
         `cp $LAB_PATH/$commit_before/$step/valgrind* $output_folder/witnesses/` if(defined glob("$LAB_PATH/$commit_before/$step/valgrind*"));
       }
       close($FD);
@@ -246,14 +241,14 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
       printf $FD "%-s %-12s %-90s %-s\n", "type", "step", "name", "time-to-exposure(s)";
       foreach my $bad_input (sort (@{$uniq_bad_inputs_per_commit{$commit_to_validate}})) {
         my $step = $crash_data{$bad_input}[1];
-        `mv $LAB_PATH/$commit_to_validate/$step/crashes/$bad_input $output_folder/notfixed/bad-inputs`;
-        `mv $LAB_PATH/$commit_to_validate/$step/stacktraces/$bad_input-output.txt $output_folder/notfixed/stacktraces 2>/dev/null`;
+        `mv '$LAB_PATH/$commit_to_validate/$step/crashes/$bad_input' $output_folder/notfixed/bad-inputs`;
+        `mv '$LAB_PATH/$commit_to_validate/$step/stacktraces/$bad_input-output.txt' $output_folder/notfixed/stacktraces 2>/dev/null`;
         ## to have the file sorted acc. the time-to-exposure:
         ## sort crash_triage/notfixed/notfixed_report.txt -n -k4
         printf $FD "%-4s %-12s %-90s %-d\n", $crash_data{$bad_input}[0], $step, $bad_input, ($stamps? $crash_data{$bad_input}[2] : 0000);
         # get and move hash stacks
         chomp(my $stackhash = `grep -l "$bad_input" $LAB_PATH/$commit_to_validate/$step/stacktraces/*stacktrace 2>/dev/null`);
-        `cp $stackhash $output_folder/notfixed/` if(defined $stackhash and not (-e "$output_folder/notfixed/" . basename($stackhash)));
+        `cp '$stackhash' $output_folder/notfixed/` if(defined $stackhash and not (-e "$output_folder/notfixed/" . basename($stackhash)));
         `cp $LAB_PATH/$commit_to_validate/$step/valgrind* $output_folder/notfixed/` if(defined glob("$LAB_PATH/$commit_to_validate/$step/valgrind*"));
       }
       close($FD);
@@ -279,7 +274,7 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
     if ($crashes_not_fixed > 0) {
       print "[!] List of the $crashes_not_fixed bad inputs at the HEAD of Contiki-NG develop branch:\n";
       foreach my $bad_input (sort (@{$uniq_bad_inputs_per_commit{'develop'}})) {
-            print "     $bad_input\n";
+            print "     '$bad_input'\n";
           }
       my $develop_report_file = "$output_folder/develop/develop-report.txt";
       `mkdir -p $output_folder/develop`;
@@ -290,14 +285,14 @@ my %crash_data; #{crash_filename} -> [type,step,time-to-exposure]
       printf $FD "%-s %-12s %-90s %-s\n", "type", "step", "name", "time-to-exposure(s)";
       foreach my $bad_input (sort (@{$uniq_bad_inputs_per_commit{'develop'}})) {
         my $step = $crash_data{$bad_input}[1];
-        `mv $LAB_PATH/develop/$step/crashes/$bad_input $output_folder/develop/bad-inputs`;
-        `mv $LAB_PATH/develop/$step/stacktraces/$bad_input-output.txt $output_folder/develop/stacktraces 2>/dev/null`;
+        `mv '$LAB_PATH/develop/$step/crashes/$bad_input' $output_folder/develop/bad-inputs`;
+        `mv '$LAB_PATH/develop/$step/stacktraces/$bad_input-output.txt' $output_folder/develop/stacktraces 2>/dev/null`;
         ## to have the file sorted acc. the time-to-exposure:
         ## sort crash_triage/notfixed/notfixed_report.txt -n -k4
         printf $FD "%-4s %-12s %-90s %-d\n", $crash_data{$bad_input}[0], $step, $bad_input, ($stamps? $crash_data{$bad_input}[2] : 0000);
         # get and move hash stacks
         chomp(my $stackhash = `grep -l "$bad_input" $LAB_PATH/develop/$step/stacktraces/*stacktrace 2>/dev/null`);
-        `cp $stackhash $output_folder/develop/` if(defined $stackhash and not (-e "$output_folder/develop/" . basename($stackhash)));
+        `cp '$stackhash' $output_folder/develop/` if(defined $stackhash and not (-e "$output_folder/develop/" . basename($stackhash)));
         `cp $LAB_PATH/develop/$step/valgrind* $output_folder/develop/` if(defined glob("$LAB_PATH/develop/$step/valgrind*"));
       }
       close($FD);
@@ -352,11 +347,11 @@ sub set_timestamps {
   my $file = shift;
 
   foreach my $input (@base_errors) {
-    if ($input =~ /^(.*?)(:hang)?:[^:]+$/) { #remove :<fuzzer> from the input name (and possibly the 'hang' keyword)
+    if ($input =~ /^(.*?)(:hang)?(:[^:]+)?$/) { #remove :<fuzzer> from the input name (and possibly the 'hang' keyword)
       my $fuzzer_file = $1;
       chomp(my $line = `grep "$fuzzer_file" $file `);
       if ($line =~ /,(\d+)$/)   {$crash_data{$input}[2]=$1}
-      else                      {die "Error: wrong format for $file - $input - $line\n";}
+      else                      {die "Error: wrong format for $file - '$input' - $line\n";}
     }
   }
   print "[+] Times to exposure loaded.\n";
@@ -365,18 +360,8 @@ sub set_timestamps {
 ### --------- Argurments/Output Handlers
 
 ### --------- Bug Validation Handlers
-## Execute the input files with different instrumentations trying to make every input crashing the target
-##                                          compiler used
-## step1: native + sanitizer (asan and ubsan) [clang]
-## step2: afl + valgrind                      [gcc]
-## step3: afl + asan                          [gcc]
-## step4: afl-gcc 'vanilla'                   [gcc]
-## input files after step4 are considered good/undetected
-##
-## Algorithm:
-##  - copy inputs into to_detect folder
-##  - move detected files after every step
-##  - go to next step if still files in to_detect
+## Deduplicate bad inputs:
+## Build the AFL-companion following fuzzing scripts
 sub execute_inputs {
   my $commit = shift;
   my $inputs = shift;
@@ -385,7 +370,7 @@ sub execute_inputs {
   # initialize Contiki_NG lab
   {
     ## checkout contiki-ng  github repo
-    chdir("contiki-ng");
+    chdir("$LAB_PATH/contiki-ground-truth");
     `git checkout $commit 1>/dev/null 2>&1`;
     chdir("..");
   }
@@ -397,70 +382,57 @@ sub execute_inputs {
   `mkdir $LAB_PATH/$commit/to-detect`;
   `cp -p $crash_folder/* $LAB_PATH/$commit/to-detect`;
 
+  if ( -d "$LAB_PATH/eval-build/savior-build" ) {
+	  if ( $ENV{AFL_SANITIZED} ) { $ENV{'AFL_COMPANION'}="afl-clang-fast-$ENV{AFL_SANITIZED}"}
+	  else                       { $ENV{'AFL_COMPANION'}="afl-clang-fast"}
+  }
+
+  ## set oracle with AFL_COMPANION if not set
+  print "-- WITNESS_ORACLE $ENV{'WITNESS_ORACLE'} --\n" if (defined $ENV{'WITNESS_ORACLE'});
+  print "-- AFL_COMPANION $ENV{'AFL_COMPANION'} --\n" if (defined $ENV{'AFL_COMPANION'});
+  unless ( defined $ENV{'WITNESS_ORACLE'} ) {
+    die "AFL_COMPANION or WITNESS_ORACLE should be set" unless ( defined $ENV{'AFL_COMPANION'} );
+    print "-- set WITNESS_ORACLE with $ENV{'AFL_COMPANION'} --\n";
+	  $ENV{'WITNESS_ORACLE'} = $ENV{'AFL_COMPANION'};
+  } elsif ( $ENV{'WITNESS_ORACLE'} =~ /^\s*$/ ) {
+    print "-- set WITNESS_ORACLE with $ENV{'AFL_COMPANION'} --\n";
+	  $ENV{'WITNESS_ORACLE'} = $ENV{'AFL_COMPANION'};
+  }
+
   print "\n[+] -- Commit $commit --\n";
 
   while (@undetected_crash > 0) {
-    $step++;
     print " ... execute " . int(@undetected_crash) . " file(s) at step $step ...\n";
 
-    if ($step == 1)   {
-      `mkdir $LAB_PATH/$commit/native-san`;
-      ## populate $warning_per_commit{$commit}
-      native_san_check($commit, $verbose);
-      if (defined $warning_per_commit{$commit}) {
-        print "\t[-] Detected " . int(@{$warning_per_commit{$commit}}) . " warned files.\n";
-        ## remove detected files from folder to detect
-        &move_files(\@{$warning_per_commit{$commit}}, "$LAB_PATH/$commit/native-san/crashes/", $commit);
-        #sanitizer scripts are not handling timeouts (detected with valgrind)
-        foreach my $f (@{$warning_per_commit{$commit}}) {$crash_data{$f}[0]="c";$crash_data{$f}[1]="native-san";}
-        ## update file to detect
-        @undetected_crash = array_minus(@undetected_crash, @{$warning_per_commit{$commit}});
-      } else {print "\t[-] Nothing detected\n"; `rm -fr $LAB_PATH/$commit/native-san`;}
-    } elsif ($step == 2)   {
-      `mkdir $LAB_PATH/$commit/afl-valgrind`;
-      ## populate $crashes_per_commit{$commit}
-      afl_valgrind_check($commit, $verbose);
-      if (defined $crashes_per_commit{$commit}) {
-        print "\t[-] Detected " . int(@{$crashes_per_commit{$commit}}) . " crashing files.\n";
-        ## remove detected files from folder to detect
-        &move_files(\@{$crashes_per_commit{$commit}}, "$LAB_PATH/$commit/afl-valgrind/crashes/", $commit);
-        foreach my $f (@{$crashes_per_commit{$commit}}) {$crash_data{$f}[1]="afl-valgrind";}
-        ## update file to detect
-        @undetected_crash = array_minus(@undetected_crash, @{$crashes_per_commit{$commit}});
-      } else {print "\t[-] Nothing detected\n"; `rm -fr $LAB_PATH/$commit/afl-valgrind`;}
-    } elsif ($step == 3)   {
-      `mkdir $LAB_PATH/$commit/afl-asan`;
-      ## populate $aflsan_per_commit{$commit}
-      afl_asan_check($commit, $verbose);
-      if (defined $aflsan_per_commit{$commit}) {
-        print "\t[-] Detected " . int(@{$aflsan_per_commit{$commit}}) . " crashing files.\n";
-        ## remove detected files from folder to detect
-        &move_files(\@{$aflsan_per_commit{$commit}}, "$LAB_PATH/$commit/afl-asan/crashes/", $commit);
-        foreach my $f (@{$aflsan_per_commit{$commit}}) {$crash_data{$f}[0]="c";$crash_data{$f}[1]="afl-asan";}
-        ## update file to detect
-        @undetected_crash = array_minus(@undetected_crash, @{$aflsan_per_commit{$commit}});
-      } else {print "\t[-] Nothing detected\n"; `rm -fr $LAB_PATH/$commit/afl-asan`;}
-    } elsif ($step == 4)   {
-      `mkdir $LAB_PATH/$commit/afl-gcc`;
-      ## populate $afl_gcc_per_commit{$commit}
-      aflgcc_check(\@undetected_crash, $commit, $verbose);
-      if (defined $afl_gcc_per_commit{$commit}) {
-        print "\t[-] Detected " . int(@{$afl_gcc_per_commit{$commit}}) . " crashing files.\n";
-        ## remove detected files from folder to detect
-        &move_files(\@{$afl_gcc_per_commit{$commit}}, "$LAB_PATH/$commit/afl-gcc/crashes/", $commit);
-        foreach my $f (@{$afl_gcc_per_commit{$commit}}) {$crash_data{$f}[0]="c";$crash_data{$f}[1]="afl-gcc";}
-        ## update file to detect
-        @undetected_crash = array_minus(@undetected_crash, @{$afl_gcc_per_commit{$commit}});
-      } else {print "\t[-] Nothing detected\n"; `rm -fr $LAB_PATH/$commit/afl-gcc`;}
-    } elsif ($step == 5)   {
-      if (int(@undetected_crash) > 0) {
+    `mkdir $LAB_PATH/$commit/$ENV{'WITNESS_ORACLE'}`;
+
+    ### We use AFL-instrumentation as bug-oracle
+    #Notice that we use (standard) AFL-clang-fast script for SAVIOR also since their AFL implementation was not soundly replicating the witnesses.
+    #if ( -d "$LAB_PATH/eval-build/savior-build" ) {
+    #  afl_savior_companion_check(\@undetected_crash, $commit, $verbose);
+    #} else {
+      companion_check(\@undetected_crash, $commit, $verbose);
+    #}
+
+    print "\n";
+
+    if (defined $afl_per_commit{$commit}) {
+      print "\t[-] Detected " . int(@{$afl_per_commit{$commit}}) . " bad inputs.\n";
+      ## remove detected files from folder to detect
+      &move_files(\@{$afl_per_commit{$commit}}, "$LAB_PATH/$commit/$ENV{'WITNESS_ORACLE'}/crashes/", $commit);
+      #sanitizer scripts are not handling timeouts (detected with valgrind)
+      foreach my $f (@{$afl_per_commit{$commit}}) {$crash_data{$f}[0]="c";$crash_data{$f}[1]="$ENV{'WITNESS_ORACLE'}";}
+      ## update file to detect
+      @undetected_crash = array_minus(@undetected_crash, @{$afl_per_commit{$commit}});
+    } else {print "\t[-] Nothing detected\n"; `rm -fr $LAB_PATH/$commit/$ENV{'WITNESS_ORACLE'}`;}
+
+    if (int(@undetected_crash) > 0) {
         `mkdir $LAB_PATH/$commit/undetected`;
         push @{$undetected_per_commit{$commit}}, @undetected_crash;
         &move_files(\@{$undetected_per_commit{$commit}}, "$LAB_PATH/$commit/undetected/", $commit);
         print "\t[-] Undetected " . int(@{$undetected_per_commit{$commit}}) . " files.\n";
-      }
-      last; #break
-    } else              {die "[-] Error: Unknown step\n"}
+    }
+    last; #break
   }
 }
 
@@ -474,140 +446,82 @@ sub move_files {
     `mkdir -p $destination`;
     foreach my $f (@{$bad_inputs})
       {
-        `mv $LAB_PATH/$commit/to-detect/$f $destination`;
-        `mv $LAB_PATH/$commit/to-detect/$f-output.txt $destination/../stacktraces` if (-e "$LAB_PATH/$commit/to-detect/$f-output.txt");
+        `mv '$LAB_PATH/$commit/to-detect/$f' $destination`;
+        `mv '$LAB_PATH/$commit/to-detect/$f-output.txt' $destination/../stacktraces` if (-e "$LAB_PATH/$commit/to-detect/$f-output.txt");
       }
   }
 }
 
-##step1
-sub native_san_check {
-  my $commit  = shift;
-  my $verbose = shift;
 
-  {
-    # compile and check binary
-    print "\t[-] Compiling native sanitizer --\n";
-    chdir("eval-build");
-
-    `./clang-san-compile.sh  > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
-    die "Error: Unable to compile contiki-ng with sanitizer (see log into $ENV{LOG_PATH}/triage-compile.log)\n" unless (-e "bin/$ENV{HARNESS_NAME}.san");
-
-    chdir("..");
-  }
-
-  print "\t[-] Execution --\n";
-  ## execute crashes and log summary
-  my $san_output = `UBSAN_OPTIONS=print_stacktrace=1 $script_dir/raise-san-messages.sh $LAB_PATH/$commit/to-detect/ ./eval-build/bin/$ENV{HARNESS_NAME}.san`;
-  ## asan analysis
-  my ($warnedfiles, $hash_to_san_traces) = &count_san_warnings("$LAB_PATH/$commit/to-detect", $san_output);
-  ## save bad inputs into global datastructure
-  $warning_per_commit{$commit} = $warnedfiles;
-
-  ## print stack traces and crashing input matching them
-  if ($verbose) {&print_san_stack_traces("$LAB_PATH/$commit/native-san/stacktraces", $hash_to_san_traces);}
-}
-
-##step2
-sub afl_valgrind_check {
-  my $commit  = shift;
-  my $verbose = shift;
-
-  {
-    # compile and check binary
-    print "\t[-] Compiling afl valgrind --\n";
-    chdir("eval-build");
-
-    `./afl-gcc-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
-    die "Error: Unable to compile contiki-ng with AFL (see log into $ENV{LOG_PATH}/triage-compile.log)\n" unless (-e "bin/$ENV{HARNESS_NAME}.afl-gcc");
-
-    chdir("..");
-  }
-
-  print "\t[-] Execution --\n";
-  ## execute crashes
-  my $valgrind_output= `python3 $script_dir/analyze-fuzzing-crashes.py ./eval-build/bin/$ENV{HARNESS_NAME}.afl-gcc $LAB_PATH/$commit/to-detect/ $ENV{'ENTRY_POINT'}`;
-  ## parse output:
-  ## {crash file} -> [valgrind return code]
-  my $returncode_per_file     = &parse_valgrind_error($valgrind_output);
-  my $nb_crashes              = &count_crashes($returncode_per_file);
-
-  # save crashes in datastructure
-  if ($nb_crashes) {
-    foreach my $crash_file (sort (keys %{$returncode_per_file})) {
-      my $crash_type = &is_bad_valgrind_code($returncode_per_file->{$crash_file});
-       if ($crash_type)
-       {
-            push @{$crashes_per_commit{$commit}}, ($crash_file);
-            $crash_data{$crash_file}[0] = ($crash_type == 1 ? "c" : "h");
-       }
-    }
-    ##clean files from valgrind executions (if host did not desactivate core dumps)
-    `rm vgcore*`;
-  }
-
-  #verbose: print valgrind report and stacktraces
-  if ($verbose) {
-   open(my $fh, '>', "$LAB_PATH/$commit/afl-valgrind/valgrind-" . substr($commit, 0, 10) . ".txt");
-   print $fh "$valgrind_output";
-   close $fh;
-   &print_valgrind_stacktrace("$LAB_PATH/$commit/afl-valgrind/stacktraces", $valgrind_output);
- }
-}
-
-##step3
-sub afl_asan_check {
-  my $commit = shift;
-  my $verbose = shift;
-
-  {
-    # compile and check binary
-    print "\t[-] Compiling afl asan --\n";
-
-    chdir("eval-build");
-    `./afl-gcc-asan-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
-    die "Error: Unable to compile contiki-ng with AFL and address sanitizer (see log into $ENV{LOG_PATH}/triage-compile.log)\n" unless (-e "bin/$ENV{HARNESS_NAME}.afl-gcc-asan");
-    chdir("..");
-  }
-
-  print "\t[-] Execution --\n";
-  ## execute crashes
-  my $san_output = `UBSAN_OPTIONS=print_stacktrace=1 $script_dir/raise-san-messages.sh $LAB_PATH/$commit/to-detect/ ./eval-build/bin/$ENV{HARNESS_NAME}.afl-gcc-asan`;
-  ## asan analysis
-  my ($warnedfiles, $hash_to_san_traces) = &count_san_warnings("$LAB_PATH/$commit/to-detect", $san_output);
-  ## save bad inputs into global datastructure
-  $aflsan_per_commit{$commit} = $warnedfiles;
-
-  ## print stack traces and crashing input matching them
-  if ($verbose) {&print_san_stack_traces("$LAB_PATH/$commit/afl-asan/stacktraces", $hash_to_san_traces);}
-}
-
-#Use fuzzer binaries AFL-gcc, AFL-clang or AFL-clang-fast
-#step4A
-sub aflgcc_check {
+sub afl_savior_companion_check {
   my $undetected_files  = shift;
   my $commit            = shift;
   my $verbose           = shift;
 
   {
     # compile and check binary
-    chomp(my $compiler_version = `gcc --version | head -n 1`);
-    print "\t[-] Compiling AFL-gcc using $compiler_version --\n";
+    print "\t[-] Compiling Contiki-NG with $ENV{'AFL_COMPANION'} (savior) --\n";
 
-    chdir("eval-build");
-    `./afl-gcc-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
-    die "Error: Unable to compile contiki-ng with AFL-gcc (see log into $ENV{LOG_PATH}/triage-compile.log)\n" unless (-e "bin/$ENV{HARNESS_NAME}.afl-gcc");
-    chdir("..");
+    chdir("$LAB_PATH/eval-build/savior-build");
+
+    `patch ../../contiki-ground-truth/Makefile.include < patch/Makefile.include.patch`;
+    if ( $ENV{'FIXNAME'} =~ /uip-rpl-classic.*/ ) {
+ 	`patch ../../contiki-ground-truth/os/net/ipv6/uip-nd6.c < patch/uip-nd6.patch`;
+    }
+
+    `./savior-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
+
+    `rm -fr bin` if (-d "bin");
+    `mkdir bin`;
+    `mv $ENV{'WORKDIR_PATH'}/bin/$ENV{'HARNESS_NAME'}.afl-clang-fast bin/`;
+    die "Error: Unable to compile contiki-ng with $ENV{'AFL_COMPANION'} (see log into $ENV{'LOG_PATH'}/triage-compile.log)\n" unless (-e "bin/$ENV{'HARNESS_NAME'}.afl-clang-fast");
+    chdir("../..");
   }
 
   print "\t[-] Execution --\n";
   foreach my $file (@{$undetected_files}) {
-    `timeout $timeout ./eval-build/bin/$ENV{HARNESS_NAME}.afl-gcc $LAB_PATH/$commit/to-detect/$file`;
+    `UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1" timeout $timeout ./eval-build/savior-build/bin/$ENV{HARNESS_NAME}.afl-clang-fast '$LAB_PATH/$commit/to-detect/$file'`;
     my $return_code = $?;
-    push @{$afl_gcc_per_commit{$commit}}, ($file) if (print_status($return_code, 0));
+    push @{$afl_per_commit{$commit}}, ($file) if (print_status($return_code, 0));
   }
 }
 
+sub companion_check {
+  my $undetected_files  = shift;
+  my $commit            = shift;
+  my $verbose           = shift;
+  my $path_to_oracle;
+
+  {
+    # Hack to force another binary for validating witnesses
+    # switch between native-build and afl build folders on the name of AFL_COMPANION
+    if ( $ENV{'WITNESS_ORACLE'} =~ /afl/ )
+     {$path_to_oracle="eval-build/afl-build";}
+    elsif ( $ENV{'WITNESS_ORACLE'} =~ /hfuzz/ )
+     {$path_to_oracle="eval-build/hfuzz-build";}
+     else
+     {$path_to_oracle="eval-build/native-build";}
+
+    # compile and check binary
+    print "\t[-] Compiling Contiki-NG with $path_to_oracle/$ENV{'WITNESS_ORACLE'} --\n";
+
+    chdir("$LAB_PATH/$path_to_oracle");
+    `./$ENV{'WITNESS_ORACLE'}-compile.sh > $ENV{LOG_PATH}/triage-compile.log 2>&1`;
+    die "Error: Unable to compile contiki-ng with $ENV{'WITNESS_ORACLE'} (see log into $ENV{LOG_PATH}/triage-compile.log)\n" unless (-e "bin/$ENV{HARNESS_NAME}.$ENV{'WITNESS_ORACLE'}");
+    chdir("../..");
+  }
+
+  print "\t[-] Execution: ./$path_to_oracle/bin/$ENV{HARNESS_NAME}.$ENV{'WITNESS_ORACLE'} --\n";
+  my $ubsan_options = "UBSAN_OPTIONS=\"halt_on_error=1:abort_on_error=1:exitcode=" . 139 . "\"";
+  foreach my $file (@{$undetected_files}) {
+    `$ubsan_options timeout $timeout ./$path_to_oracle/bin/$ENV{HARNESS_NAME}.$ENV{'WITNESS_ORACLE'} \'$LAB_PATH/$commit/to-detect/$file\'`;
+    my $return_code = $?;
+    push @{$afl_per_commit{$commit}}, ($file) if (print_status($return_code, 1));
+  }
+}
+
+
+### --------- Valgrind Handlers
 ## parse valgrind output and set %verdict with valdring's return value for every inputs
 ## TODO: problem: valgrind's --error-exitcode=<number> fixed to 50 not -11 ?
 sub parse_valgrind_error {
@@ -849,7 +763,7 @@ sub reproducibility_check {
   my $HARNESS = $ENV{'HARNESS_NAME'};
   {
     ## checkout contiki-ng  github repo
-    chdir("contiki-ng");
+    chdir("contiki-ground-truth");
     `git checkout $commit 1>/dev/null 2>&1`;
 
     # compile
@@ -984,8 +898,10 @@ sub reproducibility_check {
     $cpt_san, $cpt_aflasan);
 }
 
-## check return value after executing an input file
-## we want crashes or timeouts
+### Check target's status value after executing an input file
+# - return 0 if nothing bad detected    (print .)
+# - return 1 if deadly signal detected  (print x)
+# - return 2 if timeout detected        (print h)
 ## ref: https://perldoc.perl.org/perlvar#$?
 sub print_status {
   my $status = shift;
@@ -994,9 +910,10 @@ sub print_status {
   elsif ($status & 127) {printf "died with signal %d, %s coredump XXX\n", ($status & 127),  ($status & 128) ? 'with' : 'without' if($verbose); return 1;}
   else
   { #we specified an exit code for sanitizers
-    if ($status >> 8 == 139)   {printf "san-exit with value %d error detected XXX\n", $status >> 8 if($verbose); return 1;}
-    elsif($status >> 8 == 124) {printf "timeout (> $timeout seconds): hang detected XXX\n" if($verbose); return 2;}
-    else                       {printf "exit with value %d\n", $status >> 8 if($verbose); return 0;}
+    if ($status >> 8 == 139)   {printf "x" if($verbose); return 1;}
+    elsif($status >> 8 == 134) {printf "x" if($verbose); return 1;}
+    elsif($status >> 8 == 124) {printf "h" if($verbose); return 2;}
+    else                       {printf "." if($verbose); return 0;}
   }
 }
 ### --------- Check mode

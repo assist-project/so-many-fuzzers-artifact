@@ -15,7 +15,7 @@ printf "  - outputfolder    :$3\n"
 fixname=$1; \
 inputfolder=$2; \
 outputfolder=$3; \
-pushd ${WORKPATH}/benchmark/targets/contiki-ground-truth/container-script; \
+pushd ${WORKPATH}/src/targets/contiki-ground-truth/container-script; \
 for tool in ${inputfolder}/${fixname}/run1/*; do \
  base_tool=$(basename ${tool}); \
  mkdir -p $WORKPATH/${outputfolder}/${fixname}-corpuses; \
