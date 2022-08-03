@@ -1,19 +1,24 @@
-# Artifact Instructions 
+# Artifact Instructions
 
 Both the raw data and the fuzzing framework are available with the public link in Zenodo:
 
-## Obtain and Install the Artifact 
+## Obtain and Install the Artifact
 
-### Requirements 
+### Requirements
 
-For the benchmark to run properly, you must install:
-- [Docker](https://docs.docker.com/engine/install/), and
-- the Perl module `Array::Utils` (`sudo cpan install Array::Utils`).
-- For AFL, you need to run `echo core >/proc/sys/kernel/core_pattern` with root (`su`).
+We are assuming you already have a relatively recent machine running Linux or macOS.
+
+For the experiments to run properly, you must also install:
+- [Docker](https://docs.docker.com/engine/install/).
+- The Perl module `Array::Utils` (with e.g., `sudo cpan install Array::Utils`).
+
+Also, for AFL, you need to run `echo core > /proc/sys/kernel/core_pattern` as root (`sudo`).
 
 ### Unpack
 
-To install the artifact, just download the .tar from Zenodo or clone the GitHub repository. Here are the commands from the .tar archive:
+To install the artifact, just download the .tar from Zenodo or clone its GitHub repository.
+
+Here are the commands for the .tar archive:
 
 ```
 tar -xf so-many-fuzzers-artifact.tar
@@ -23,22 +28,25 @@ ls $WORKPATH
 ```
 `>output`
 ```
-INSTALL.md  README.md  ase2022-so-many-fuzzers.pdf  benchmark  data-220727.tar
+INSTALL.md  README.md  LICENSE.md  ...
 ```
 `>output`
 
-Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder. The content should be the files LICENSE.md, README.md, and INSTALL.md, the folder benchmark, the paper ase2022-so-many-fuzzers.pdf (draft version) and the raw data archive 'data-220727.tar'.
+Make sure to set the variable `WORKPATH` with the absolute path to the decompressed folder.
+Its contents should include the files LICENSE.md, README.md, and INSTALL.md (this file).
 
-> Notice, that we denote the expected outputs from a command with the tag `>output`
+Notice that we denote the expected output from a command with the tag `>output`.
 
 ### Experiment Data
 
-The experiment data are archived into `data-220727.tar`. We also provide a script to show the raw data and the data as formatted into the paper (trials:mean-time-to-exposure). Executing the next commands will print the raw data and Table 3's row for uIP-overflow.
+The experiment data are archived into `data-220727.tar`.
+We also provide a script to show the raw data and the data as formatted into the paper (trials:mean-time-to-exposure).
+Executing the next commands will print the raw data and Table 3's row for uIP-overflow.
 
 ```
 cd $WORKPATH
 tar -xf data-220727.tar
-perl $WORKPATH/benchmark/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
+perl $WORKPATH/src/suites-management/script/print_csv_overview.pl -input=$WORKPATH/data/3.1/uIP/uip-overflow.csv
 ```
 `>output`
 ```
@@ -73,14 +81,15 @@ perl $WORKPATH/benchmark/suites-management/script/print_csv_overview.pl -input=$
 
 ## Get Started 
 
-The experiment consists in launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers. We give you first a small example to check that everything is working well and depict next the commands to reproduce the paper's results.
+The experiments consist of launching a fuzzing campaign for each fuzzer and vulnerability with and without sanitizers.
+Let us first see a small example to check that everything is working well and depict next the commands to reproduce the paper's results.
 
-**Example**: we launch _symcc_ for _uip-overflow_ vulnerability with a timeout of _10_ minutes (leave also ~2 minutes for the validation).
+**Example**: we launch _symcc_ for _uip-overflow_ vulnerability with a timeout of _10_ minutes (we suggest to also allow 2 minutes for the validation).
 
 Running the following commands will launch the campaign:
 ```
 mkdir -p ${WORKPATH}/test \
-  && ${WORKPATH}/benchmark/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
+  && ${WORKPATH}/src/suites-management/run-ground-truth-campaign.sh -b uip-overflow -f symcc -n 2 -t 10m --output ${WORKPATH}/test/uip-overflow
 ```
 `>output`
 ```
@@ -91,7 +100,7 @@ mkdir -p ${WORKPATH}/test \
   - ... commit found: a1cba5607c44514a9644333b6ca0a9a5e0f3c59e.
 [+] Configure for: uip...
 [+] Write .env files...
-[+] Run: ${WORKPATH}/benchmark/docker/run-fuzzing-campaign.sh with:
+[+] Run: ${WORKPATH}/src/docker/run-fuzzing-campaign.sh with:
     -f symcc
     -s contiki-ground-truth
     -h contiki-ng-fuzzing
@@ -125,10 +134,13 @@ CONTAINER ID   IMAGE                         COMMAND                  CREATED   
 ```
 `>output`
 
-OK, the campaign is running. Give SymCC some times to expose the vulnerability… After 15 minutes, the container should have finished, you can now compute the overview and .csv file with the command:
+OK, the campaign is running.
+Give SymCC some time to expose the vulnerability.
+After about 15 minutes, the container should have finished.
+You can now compute the overview and .csv file with the command:
 
 ```
-perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
+perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/uip-overflow/
 ```
 `>output`
 ```
@@ -150,37 +162,43 @@ uip-overflow.csv written.
 ```
 `>output`
 
-According to this instance, only one SymCC's trial exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds). Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
+According to these results, only one trial of SymCC exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds).
+Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
-> Note: Fuzzing campaigns are greedy in disk-usage and memory. Please be sure you have sufficient resource before running campaigns and frequently clean Docker's images and campaign's logs.
+> Note: Fuzzing campaigns are greedy in disk-usage and memory. Please be sure you have sufficient resources before running campaigns and frequently clean Docker's images and campaign's logs.
 
 ### Evaluate a Tool
 
-The results shown in the previous section use multiple binaries to report bad inputs. It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers. We provide a second script to evaluate a corpus from a campaign using a specific binary.
+The results shown in the previous section use multiple binaries to report bad inputs.
+It is convenient to find new crashes and understand a vulnerability but not for evaluating fuzzers.
+We provide a second script to evaluate a corpus from a campaign using a specific binary.
 
 ####  Feeding corpora for evaluation
 
 In the folder `data`, corpora from our experiment on uip-len are stored.
 To feed them to the target with AddressSanitizer instrumentation runs the next command:
 ```
-${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/gt_corpuses/uIP/ ${WORKPATH}/test/corpus asan
+${WORKPATH}/src/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/gt_corpuses/uIP/ ${WORKPATH}/test/corpus asan
 ```
 
-The script builds a docker image for each tool and runs the evaluation. After that all the corpora have been checked, (it may last some time), you can run the 'print_campaign_overview.pl' to see the result.
+The script builds a docker image for each tool and runs the evaluation.
+After all the corpora have been checked, (it may last some time), you can run the `print_campaign_overview.pl` to see the result.
 
 ```
-perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-overflow
+perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/corpus/uip-overflow
 ```
 
 
 ####  Corpus Generation
 [Ubuntu only]
 
-We provide a script to gather all inputs from a campaign and create a corpus. However, this uses the `rename` command, which you should install (`sudo apt-get install rename` for Ubuntu like OS). It is not mandatory, but there are identical filenames from different input types (hangs/inputs/crashes) that will be lost without it.
+We provide a script to gather all inputs from a campaign and create a corpus.
+However, this uses the `rename` command, which you should install (`sudo apt-get install rename` for Ubuntu like OS).
+It is not mandatory, but there are identical filenames from different input types (hangs/inputs/crashes) that will be lost without it.
 
 To generate a corpus for the example above, run the command:
 ```
-export WORKPATH && ${WORKPATH}/benchmark/suites-management/script/gather_corpus.sh uip-overflow  ${WORKPATH}/test/  ${WORKPATH}/test/corpuses
+export WORKPATH && ${WORKPATH}/src/suites-management/script/gather_corpus.sh uip-overflow  ${WORKPATH}/test/  ${WORKPATH}/test/corpuses
 ```
 with gather_corpus.sh <vulnerability> <path_to_campaign> <output_folder>
 
@@ -190,7 +208,7 @@ with gather_corpus.sh <vulnerability> <path_to_campaign> <output_folder>
   - fixname         :uip-overflow
   - inputfolder     :/home/clemp/so-many-fuzzers-artifact/test/
   - outputfolder    :/home/clemp/so-many-fuzzers-artifact/test/corpuses
-~/so-many-fuzzers-artifact/benchmark/targets/contiki-ground-truth/container-script ~/so-many-fuzzers-artifact
+~/so-many-fuzzers-artifact/src/targets/contiki-ground-truth/container-script ~/so-many-fuzzers-artifact
 sync at: ${WORKPATH}/so-many-fuzzers-artifact/test//uip-overflow/run1/symcc/sync_folder
 - Collecting 107 inputs from afl-master -
 - Collecting 115 inputs from afl-slave -
@@ -227,11 +245,11 @@ sync at: ${WORKPATH}/so-many-fuzzers-artifact/test//uip-overflow/run2/symcc/sync
 Finally, try to validate evaluate the uip-overflow campaign with AFL-clang-Asan with the two next commands.
 
 ```
-${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/test/corpuses/ ${WORKPATH}/test/results-with-asan asan
+${WORKPATH}/src/suites-management/script/validate_corpus.sh uip-overflow ${WORKPATH}/test/corpuses/ ${WORKPATH}/test/results-with-asan asan
 ```
 
 ```
-perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/results-with-asan/uip-overflow
+perl ${WORKPATH}/src/suites-management/script/print_campaign_overview.pl  -input=${WORKPATH}/test/results-with-asan/uip-overflow
 ```
 
 `>output`
@@ -252,43 +270,45 @@ perl ${WORKPATH}/benchmark/suites-management/script/print_campaign_overview.pl  
 ```
 `>output`         
 
-With AFL-Clang-Asan both trials detected uip-overflow and in 1 minutes 31 seconds in average!
+With AFL-Clang-Asan both trials detected uip-overflow in 1 minute 31 seconds on average.
 
 
-That finishes our starter example, you can now:
+That finishes our starter example.
+
+You can now:
 - run a fuzzing campaign with the tool/vulnerability/sanitizer you want and all this with -n instances,
 - collect each run's corpus, and 
 - evaluate the detected vulnerabilities with standard or sanitized targets.
 
 ! Happy fuzzing !
 
-## Reproduce Paper Results
+## How to (Try to) Reproduce the Paper Results
 
-### To reproduce Section 3 results
+### Section 3 Results
 
-For section 3, we ran a campaign with 10 tools for all combinations <vulnerability, tool> using the command:
+For Section 3, we ran a campaign with 10 trials for all combinations <vulnerability, tool> using the command:
 ```
-cd ${WORKPATH}/benchmark/suites-management \
+cd ${WORKPATH}/src/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
 - The paper's raw-data are in `${WORKPATH}/data/3.1`.
 
-### To reproduce Section 4.1 results
+### Section 4.1 Results
 
-For section 4.1, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with AddressSanitizer using the command:
+For the results of Section 4.1, we ran a campaign with 10 trials for all combinations <vulnerability, tool> with AddressSanitizer using the command:
 ```
-cd ${WORKPATH}/benchmark/suites-management \
+cd ${WORKPATH}/src/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh --san asan -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
 - The paper's raw-data are in `${WORKPATH}/data/4.1`.
 
-### To reproduce 4.2
+### Section 4.2 Results
 
-For section 4.2, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the command:
+For Section 4.2, we ran a campaign with 10 tools for all combinations <vulnerability, tool> with EffectiveTypeSanitizer using the command:
 ```
-cd ${WORKPATH}/benchmark/suites-management \
+cd ${WORKPATH}/src/suites-management \
   && mkdir -p ${OUTPUT_FOLDER} \ 
   && ./run-ground-truth-campaign.sh --san effectivesan -b <vulnerability> -f <tool> -n 10 -t 24h --output ${OUTPUT_FOLDER}
 ```
@@ -296,22 +316,22 @@ cd ${WORKPATH}/benchmark/suites-management \
 
 ### Values for <tool> and <vulnerability>
 
-Values for <tool> (option -f): `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`. 
+Values for <tool> (option -f) are: `afl-gcc`, `afl-clang-fast`, `mopt`, `honggfuzz`, `angora`, `qsym`, `intriguer`, `symcc`. 
 
-Values for <vulnerability> (option -b): `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`. 
+Values for <vulnerability> (option -b) are: `uip-overflow`, `uip-ext-hdr`, `uip-len`, `6lowpan-frag`, `srh-param`, `nd6-overflow`, `6lowpan-ext-hdr`, `srh-addr-ptr`, `6lowpan-decompr`, `6lowpan-hdr-iphc`, `snmp-oob-varbinds`, `snmp-validate-input`, `uip-rpl-classic-prefix`, `uip-rpl-classic-div`, `6lowpan-udp-hdr`, `6lowpan-payload`, `uip-buf-next-hdr`, `uip-rpl-classic-sllao`. 
 
-### To reproduce 4.3
+### Section 4.3 Results
 
 The experiment in Section 4.3 consists in feeding corpora from the 'standard' fuzzing campaigns, i.e. with the usual tool's instrumentation, to a sanitizer.
 
-More precisely, for computing the right columns of Table~13 we ran:
+More precisely, for computing the right columns of Table 13, we ran:
 ```
-${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh <v> <i> asan
+${WORKPATH}/src/suites-management/script/validate_corpus.sh <v> <i> asan
 ```
 
-Similarly, for computing the right columns of Table~14 we ran:
+Similarly, for computing the right columns of Table 14, we ran:
 ```
-${WORKPATH}/benchmark/suites-management/script/validate_corpus.sh <v> <i> effectivesan
+${WORKPATH}/src/suites-management/script/validate_corpus.sh <v> <i> effectivesan
 ```
 
 With <v> the corresponding vulnerabilities and <i> the path to a set of tool's corpus folders.
