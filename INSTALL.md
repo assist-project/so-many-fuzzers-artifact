@@ -21,8 +21,8 @@ To install the artifact, just download the .tar from Zenodo or clone its GitHub 
 Here are the commands for the .tar archive:
 
 ```bash
-> tar -xf so-many-fuzzers-artifact.tar
-> cd so-many-fuzzers-artifact
+> tar -xf so-many-fuzzers-artifact-V1.0.zip
+> cd assist-project-so-many-fuzzers-artifact-5772e7f
 > export WORKPATH=$PWD
 > ls $WORKPATH
 INSTALL.md  README.md  LICENSE.md  ...
