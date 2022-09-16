@@ -115,7 +115,8 @@ Use 'docker scan' to run Snyk tests against images to find vulnerabilities and l
 The above command requires a building time of 529.0 seconds (i.e., about 10
 minutes) on a MacBook Pro.
 
-The command `docker ps` shows the running containers:
+Now wait for two minutes to pass,
+and then use the command `docker ps` which will show the running containers:
 ```bash
 > docker ps
 CONTAINER ID   IMAGE                         COMMAND                  CREATED         STATUS         PORTS     NAMES
@@ -126,6 +127,7 @@ CONTAINER ID   IMAGE                         COMMAND                  CREATED   
 OK, the campaign is running.
 Give SymCC some time to expose the vulnerability.
 After about 15 minutes, the container should have finished.
+(You can see that it has by `docker ps` not showing these containers running anymore.)
 You can now compute the overview and .csv file with the command:
 
 ```bash
@@ -149,6 +151,7 @@ uip-overflow.csv written.
 ```
 
 According to these results, only one trial of SymCC exposed _uip-overflow_ after 234 seconds (3 minutes and 54 seconds).
+Of course, you may be more lucky (i.e., both trials explosing the bug) or less lucky than what this example shows.
 
 Finally, you can see the fuzzers' logs in `${WORKPATH}/test/uip-overflow/run1/symcc/log/` and check that nothing wrong happened.
 
