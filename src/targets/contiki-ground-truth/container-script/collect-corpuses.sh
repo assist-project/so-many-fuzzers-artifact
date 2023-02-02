@@ -1,7 +1,7 @@
 #!/bin/bash
 
-## - Gather seed pool, bad inputs or corpuses (both of them), from a fuzzing campaign folder 
-## - Try also to catch the timetamps
+## - Gather seed pool, bad inputs or corpuses (both of them), from a fuzzing campaign folder.
+## - Try also to catch the timestamps.
 ##
 
 INPUT_FOLDER=$1

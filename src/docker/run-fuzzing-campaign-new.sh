@@ -185,7 +185,7 @@ then
   then
     printf "[+] Docker Image ${TAG} built.\n\n"
   else
-    echo "[!] An error occured during the image compilation [!]" >&2
+    echo "[!] An error occurred during the image compilation [!]" >&2
     exit 1
   fi
 else

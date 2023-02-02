@@ -38,7 +38,7 @@ sub usage() {
   $usage    .= "\t\t  -- Modes check --\n";
   $usage    .= "usage: $0 -check [options] -- folder\n";
   $usage    .= "  ---- Options:\n";
-  $usage    .= " -stack=folder:     consider the folder contaning stacktraces, and only check the first crash of every stack\n";
+  $usage    .= " -stack=folder:     consider the folder containing stacktraces, and only check the first crash of every stack\n";
   $usage    .= " -commit=sha:       the sha of Contiki-NG commit to check the inputs at\n";
   $usage    .= "  \n";
   $usage    .= "  ------------- General Options:\n";
@@ -529,7 +529,7 @@ sub parse_valgrind_error {
   my $crash_file      = undef;
   my %verdict;
 
-  # split Valgrind ouput by 'Testing' keyword
+  # split Valgrind output by 'Testing' keyword
   my @error_output = split(/Testing /, $valgrind_output);
   shift @error_output; #remove first line (command line)
 
@@ -566,7 +566,7 @@ sub print_valgrind_stacktrace {
   my %traces;
   my %verdict;
 
-  # split Valgrind ouput by 'Testing' keyword
+  # split Valgrind output by 'Testing' keyword
   my @error_output = split(/Testing /, $valgrind_output);
   shift @error_output; #remove first line (command line)
 

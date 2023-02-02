@@ -38,4 +38,4 @@ do
 done
 echo
 
-echo "[+] ${raised_error} files raising at leat one ASAN/UBSAN error!"
+echo "[+] ${raised_error} files raising at least one ASAN/UBSAN error!"

@@ -76,7 +76,7 @@
 #define FUZZ_COAP_ENDPOINT "fdfd::100"
 #define FUZZ_COAP_PORT 8293
 
-/* When persitent mode is set, the fuzzer will run multiple fuzzing tests within a process.
+/* When persistent mode is set, the fuzzer will run multiple fuzzing tests within a process.
    Note that the code must be compiled with afl-clang-fast. */
 #define FUZZ_PERSISTENT_MODE 0
 

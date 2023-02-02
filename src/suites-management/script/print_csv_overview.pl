@@ -75,7 +75,7 @@ while (my $line = <$data>)
 
 my $fh;
 ## Print raw-data (time-to-exposure or timeout for every trial)
-#  Optionnaly print the raw-data into a csv file.
+## Optionally, print the raw-data into a csv file.
 print(" Raw Data from $input:\n");
 
 
